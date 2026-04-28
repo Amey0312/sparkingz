@@ -7,7 +7,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/dist/ScrollToPlugin";
 import { TextPlugin } from "gsap/dist/TextPlugin";
-import Lenis from "@studio-freight/lenis";
+import Lenis from "lenis";
 import InfiniteSlider from "./slider";
 import { MessageCircle } from "lucide-react";
 import Navbar from "./navbar";
@@ -130,6 +130,7 @@ export default function DominateSite(): React.ReactElement {
   const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
+    
     const lenis = new Lenis({
       duration: 1.1,
       smoothWheel: true,
