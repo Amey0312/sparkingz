@@ -31,7 +31,7 @@ export default function PerfectDentroFullPage() {
         {/* =========================================================
             TOP HERO SECTION: HEADING + STAT PANEL
            ========================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-zinc-900 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 border-b h-screen border-zinc-900 w-full">
           {/* Hero Left: Heading Title */}
           <div className="lg:col-span-9 p-8 md:p-12 lg:p-16 pb-0 flex flex-col justify-between">
             <h1 className="font-editorial-heading text-[12.5vw] lg:text-[10.5vw] font-bold leading-[0.82] tracking-tighter text-white uppercase mt-2">
@@ -61,17 +61,19 @@ export default function PerfectDentroFullPage() {
               <span className="text-[#c5a880] text-[9px] transform rotate-45 select-none">✦</span>
             </div>
           </div>
+
+          
         </div>
 
         {/* =========================================================
             MIDDLE MAIN CONTENT SECTION: THE LARGE CONTINUOUS OVAL
            ========================================================= */}
-        <div className="w-full border-b border-zinc-900 px-8 md:px-12 lg:px-16 py-12 flex justify-center bg-gradient-to-b from-[#0c0c0c] to-[#0a0a0a]">
+        {/* <div className="w-full border-b border-zinc-900 px-8 md:px-12 lg:px-16 py-12 flex justify-center bg-gradient-to-b from-[#0c0c0c] to-[#0a0a0a]">
           <div className="w-full max-w-[1200px] aspect-[16/9] bg-[#121212] border border-zinc-800 rounded-[160px] md:rounded-[260px] overflow-hidden relative shadow-2xl">
             <div className="absolute inset-0 bg-black/20" />
             <div className="w-full h-full bg-gradient-to-tr from-zinc-900 to-zinc-800 opacity-60" />
           </div>
-        </div>
+        </div> */}
 
         {/* =========================================================
             LOWER SERVICES & ABOUT SECTION (Matches image_e47391.png Exactly)
