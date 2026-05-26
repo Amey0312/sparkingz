@@ -92,15 +92,6 @@ export default function ServiceContent() {
       {/* MASTER LAYER CONTAINER */}
       <div className="w-full max-w-[1440px] mx-auto border-x border-[#2b5c32]/10 flex flex-col">
         
-        {/* NAVIGATION HEADER */}
-        <nav className="w-full border-b border-[#2b5c32]/10 px-12 py-7 flex justify-between items-center text-[10px] tracking-[0.3em] text-[#2b5c32]/80 uppercase font-medium relative z-30 bg-[#FBF5DD]">
-          <div className="cursor-pointer hover:text-black transition-colors" onClick={() => setIsMenuOpen(true)}>MENU</div>
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/demo')}>
-            <div className="w-2.5 h-2.5 bg-[#2b5c32] rounded-tr-full"></div>
-            <span className="font-editorial-heading tracking-[0.1em] text-sm text-[#16251b] font-bold">SparkingStarz</span>
-          </div>
-          <div className="cursor-pointer hover:text-black transition-colors">CONTACT</div>
-        </nav>
 
         {/* BODY CONTENT SECTION */}
         <main className="w-full p-8 md:p-12 lg:p-16 flex flex-col space-y-12 bg-[#FBF5DD]/30 min-h-[70vh]">
