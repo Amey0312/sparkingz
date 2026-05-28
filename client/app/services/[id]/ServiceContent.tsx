@@ -4,50 +4,50 @@ import { useParams, useRouter } from 'next/navigation';
 
 // Mock data configuration keys
 const servicesData: Record<string, { title: string; num: string; tagline: string; fullDesc: string; scope: string[] }> = {
-  'design-project': {
+  'security-services': {
     num: '01',
-    title: 'DESIGN PROJECT DEVELOPMENT',
-    tagline: 'Balancing style, architectural precision, and function.',
-    fullDesc: 'Our design project development stage covers the meticulous curation of spatial floorplans, volumetric blueprints, and thematic conceptualization. We manage spatial problems dynamically, engineering an internal layout that is tailored uniquely to luxury residential specifications.',
-    scope: ['Concept Space Planning', '3D Volumetric Sketching', 'Material Continuity Moodboards', 'Architectural Drafting']
+    title: 'SECUIRTY SERVICES',
+    tagline: 'YOUR SAFETY, OUR PRIORITY',
+    fullDesc: 'With over 5 years of experience, our security services ensure safety and peace of mind. Our trained personnel are equipped to handle residential, commercial, and industrial security needs with professionalism and vigilance.',
+    scope: ['Residential Societies & Apartments', 'Commercial offices & IT Parks', 'Industrials & Warehouses', 'Retail stores & Malls', 'Events & Private Functions']
   },
-  'interior-decoration': {
+  'building-painting-service': {
     num: '02',
-    title: 'INTERIOR DECORATION',
-    tagline: 'Sourcing bespoke design pieces and custom textiles.',
-    fullDesc: 'We specialize in finishing spaces with curation choices that articulate character. This covers premium fixture sourcing, vintage or boutique furniture acquisition, custom window fabric dressing, and intentional art positioning.',
-    scope: ['Furniture Selection & Curation', 'Textile Coordination', 'Art Advisory & Sourcing', 'Color Consultation']
+    title: 'BUILDING PAINTING SERVICES',
+    tagline: 'ADDING COLOR TO YOUR WORLD',
+    fullDesc: 'We provide expert painting solutions for interiors and exteriors. With 5 years of industry experience, we ensure durable finishes, aesthetic appeal, and timely execution for all types of properties.',
+    scope: ['Residential Building', 'Corporate Offices', 'Hospitals & Clinics', 'Schools & Colleges', 'Hotels & Restaurants']
   },
-  'project-visualization': {
+  'housekeeping-services': {
     num: '03',
-    title: 'PROJECT VISUALIZATION',
-    tagline: 'Hyper-realistic digital representations of your custom layouts.',
-    fullDesc: 'Experience your spaces before construction breaking. Utilizing top-tier digital rendering pipelines, we simulate realistic light paths, textile reflections, and spatial flows so choices are locked in with absolute certainty.',
-    scope: ['Photorealistic 3D Renderings', 'Lighting Simulations', 'VR Spatial Walkthroughs', 'Animation Reels']
+    title: 'HOUSEKEEPING SERVICES',
+    tagline: 'CLEAN SPACES, HAPPY LIVES',
+    fullDesc: 'Our housekeeping solutions are designed to maintain cleanliness and hygiene standards across all spaces. Backed by 5 years of experience, we use modern techniques and trained staff to deliver consistent quality.',
+    scope: ['Residential Building', 'Corporate Offices', 'Hospitals & Clinics', 'Schools & Colleges', 'Hotels & Restaurants']
   },
-  'selection-purchase': {
+  'interior-designing': {
     num: '04',
-    title: 'SELECTION AND PURCHASE OF MATERIALS',
-    tagline: 'Full procurement management from global premium channels.',
-    fullDesc: 'Navigating manufacturing pipelines safely. We handle logistics, factory vetting, global acquisition, trade-discount negotiation, and raw batch auditing for natural stones, luxury hardwoods, and pristine metal finishes.',
-    scope: ['Global Vendor Sourcing', 'Order Management & Tracking', 'Quality Control Audits', 'Logistics Planning']
+    title: 'INTERIOR DESIGNING SERVICES',
+    tagline: 'DESIGNING SPACES THAT INSPIRE',
+    fullDesc: 'Our interior designing services focus on creating functional and visually appealing spaces. With 5 years of expertise, we blend creativity with practicality to transform homes and workplaces.',
+    scope: ['Residential Houses', 'Office Spaces', 'Retail & Showrooms', 'Hotels & Hospitality Spaces', 'Clinics & Healthcare Spaces']
   },
-  'project-management': {
+  'old-age-housing': {
     num: '05',
-    title: 'PROJECT MANAGEMENT',
-    tagline: 'Rigorous supervision from project groundbreaking to keys hand-off.',
-    fullDesc: 'Bridging design intention with field execution. We manage site timelines, direct subcontract trades, run safety benchmark checkpoints, and maintain architectural precision until final hand-off verification.',
+    title: 'OLD AGE HOUSING SERVICES',
+    tagline: 'CARE, COMFORT & DIGNITY.',
+    fullDesc: 'We provide a safe, peaceful, and caring environment for senior citizens, ensuring  they feel at home with complete comfort and respect. With 5+ years of experience, our old age housing focuses on personalized care, hygiene, security, and emotional well-being. Our dedicated team ensures that every resident receives attention, companionship, and a dignified lifestyle.',
     scope: ['Timeline Execution Supervision', 'Subcontract Trade Alignment', 'Budget Control Monitoring', 'Final Compliance Audits']
   },
-  'repair-reconstruction': {
+  'paying-guest-accommodation': {
     num: '06',
-    title: 'REPAIR AND RECONSTRUCTION',
-    tagline: 'Complete custom spatial restoration and engineering work.',
-    fullDesc: 'Preserving integrity while updating modern performance profiles. Our engineering execution covers sub-surface corrections, structural column alterations, structural masonry re-alignment, and integration of smart climate mechanics.',
-    scope: ['Structural Engineering Re-alignment', 'Heritage Restoration Work', 'HVAC Smart Integrations', 'Masonry Correction']
+    title: 'PAYING GUEST ACCOMMODATION SERVICES',
+    tagline: 'COMFORT LIVING, SIMPLIFIED',
+    fullDesc: 'We offer comfortable and secure paying guest accommodations with modern amenities. With 5 years of experience, we ensure a homely environment, safety, and convenience for all residents.',
+    scope: ['Working Professionals', 'Students', 'Corporate Employees', 'Temporary Relocation Stays','Short-Term Accomodation']
   }
 };
-
+  
 export default function ServiceContent() {
   const params = useParams();
   const router = useRouter();

@@ -4,12 +4,12 @@ import ServiceContent from './ServiceContent';
 // This function runs on the server at build-time
 export async function generateStaticParams() {
   return [
-    { id: 'design-project' },
-    { id: 'interior-decoration' },
-    { id: 'project-visualization' },
-    { id: 'selection-purchase' },
-    { id: 'project-management' },
-    { id: 'repair-reconstruction' },
+    { id: 'security-services' },
+    { id: 'building-painting-service' },
+    { id: 'housekeeping-services' },
+    { id: 'interior-designing' },
+    { id: 'old-age-housing' },
+    { id: 'paying-guest-accommodation' },
   ];
 }
 
