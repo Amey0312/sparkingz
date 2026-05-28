@@ -8,6 +8,9 @@ import Link from 'next/link';
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 }
+const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID';
+const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
 
 export default function PerfectDentroFullPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,6 +23,58 @@ export default function PerfectDentroFullPage() {
   const servicesRef = useRef<HTMLDivElement>(null);
   const projectsRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
+
+
+  // ─── Add this state near your other useState hooks ───
+  const [formOpen, setFormOpen] = useState(false);
+  const [formState, setFormState] = useState({ name: '', email: '', phone: '' });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setFormOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Prevent body scroll when open
+  useEffect(() => {
+    document.body.style.overflow = formOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [formOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+    setError('');
+    try {
+      const emailjs = (await import('@emailjs/browser')).default;
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          from_name: formState.name,
+          from_email: formState.email,
+          phone: formState.phone,
+          reply_to: formState.email,
+        },
+        EMAILJS_PUBLIC_KEY
+      );
+      setSent(true);
+      setTimeout(() => {
+        setFormOpen(false);
+        setSent(false);
+        setFormState({ name: '', email: '', phone: '' });
+      }, 2800);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
 
   // Core DOM element tracking references for GSAP Pinning
   const scrollPinSectionRef = useRef<HTMLDivElement>(null);
@@ -424,40 +479,52 @@ export default function PerfectDentroFullPage() {
 
   const servicesList = [
     {
-      id: 'security-services',
-      num: '01',
-      title: 'SECURITY SERVICES',
-      desc: 'We create a complete design concept, carefully balancing style and functionality to reflect your vision in every detail.',
-    },
-    {
       id: 'building-painting-service',
       num: '02',
       title: 'BUILDING PAINTING',
+      img: 'images/building-painting-service.png',
       desc: 'Sourcing and styling bespoke design pieces, tailored artworks, and fine textile curation to elevate your personal spaces.',
-    },
-    {
-      id: 'housekeeping-services',
-      num: '03',
-      title: 'HOUSEKEEPING SERVICES',
-      desc: 'Comprehensive cleaning and maintenance solutions to keep your space pristine and welcoming.',
+      tags: ['Exterior Painting', 'Interior Painting', 'Waterproofing', 'Texture Finish'],
     },
     {
       id: 'interior-designing',
       num: '04',
       title: 'INTERIOR DESIGNING',
+      img: 'images/interior-design-service.webp',
       desc: 'Full procurement management from global premium suppliers, balancing budget realities with exceptional structural quality.',
+      tags: ['Space Planning', 'Furniture Curation', 'Lighting Design', 'Material Sourcing'],
+    },
+    {
+      id: 'housekeeping-services',
+      num: '03',
+      title: 'HOUSEKEEPING SERVICES',
+      img: 'images/house-cleaning-service.webp',
+      desc: 'Comprehensive cleaning and maintenance solutions to keep your space pristine and welcoming.',
+      tags: ['Deep Cleaning', 'Daily Upkeep', 'Laundry', 'Sanitisation'],
     },
     {
       id: 'old-age-housing',
       num: '05',
       title: 'OLD AGE HOUSING',
+      img: 'images/oldage-housing-service.webp',
       desc: 'Rigorous architectural supervision from initial groundwork site-mapping to final client walkthrough handshakes.',
+      tags: ['Assisted Living', 'Safety Modifications', 'Community Spaces', 'Care Support'],
+    },
+    {
+      id: 'security-services',
+      num: '01',
+      title: 'SECURITY SERVICES',
+      img: 'images/security-service.png',
+      desc: 'We create a complete security concept, carefully balancing vigilance and discretion to reflect your safety needs in every detail.',
+      tags: ['CCTV Setup', 'Guard Services', 'Access Control', 'Emergency Response'],
     },
     {
       id: 'paying-guest-accommodation',
       num: '06',
       title: 'PAYING GUEST ACCOMMODATION',
+      img: 'images/pg-acc-service.jfif',
       desc: 'Complete structural renovations and heritage restoration works managed by premier certified craft engineers.',
+      tags: ['Furnished Rooms', 'Meals Included', 'Wi-Fi & Utilities', 'Monthly Plans'],
     },
   ];
 
@@ -469,7 +536,7 @@ export default function PerfectDentroFullPage() {
           }`}
         style={{ willChange: 'transform, opacity' }}
       >
-        <nav className="w-full border-b border-[#2b5c32]/10 px-12 py-7 flex justify-between items-center text-[10px] tracking-[0.3em] text-[#2b5c32]/70 uppercase font-medium">
+        <nav className="w-full border-b border-[#ffffff]/80 px-12 py-7 flex justify-between items-center text-[10px] tracking-[0.3em] text-[#2b5c32]/70 uppercase font-medium">
           <button
             onClick={() => setIsMenuOpen(false)}
             className="cursor-pointer hover:text-black transition-colors text-[#2b5c32]"
@@ -541,38 +608,44 @@ export default function PerfectDentroFullPage() {
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
         }}>
-          <nav className="w-full border-b border-[#2b5c32]/10 px-12 py-7 flex justify-between items-center text-[10px] tracking-[0.3em] text-[#2b5c32]/80 uppercase font-medium relative z-30 text-[#ffffff]/80">
+          <nav className="w-full border-b border-[#ffffff]/10 px-12 py-7 flex justify-between items-center text-[10px] tracking-[0.3em] text-[#2b5c32]/80 uppercase font-medium relative z-30 text-[#ffffff]/80">
             <div className="flex items-center gap-2 cursor-pointer">
               <span className="font-editorial-heading tracking-[0.1em] text-lg text-[#16251b] font-bold">
                 Sparking Stars
               </span>
             </div>
 
-            <div className="flex gap-8 ">
-              <button onClick={toggleMenu} className="cursor-pointer hover:text-black transition-colors">MENU</button>
-              <div className="hidden md:flex gap-6">
-                {/* <Link href="/catalog" className="hover:text-black">Catalog</Link> */}
+            {/* MOBILE ONLY: Menu Button */}
+            <button
+              onClick={toggleMenu}
+              className="md:hidden cursor-pointer hover:text-black transition-colors"
+            >
+              MENU
+            </button>
+
+            {/* LAPTOP ONLY: Navigation Links */}
+            <div className="hidden md:flex gap-8">
+              <div className="flex gap-6">
                 <button onClick={() => handleNavClick('about')} className="hover:text-black hover:cursor-pointer">About us</button>
-                <button onClick={() => handleNavClick('services')} className="hover:text-black  hover:cursor-pointer">Services</button>
-                <button onClick={() => handleNavClick('contact')} className="hover:text-black  hover:cursor-pointer">Contacts</button>
-                <button onClick={() => handleNavClick('projects')} className="hover:text-black  hover:cursor-pointer">Project</button>
+                <button onClick={() => handleNavClick('services')} className="hover:text-black hover:cursor-pointer">Services</button>
+                <button onClick={() => handleNavClick('contact')} className="hover:text-black hover:cursor-pointer">Contacts</button>
+                <button onClick={() => handleNavClick('projects')} className="hover:text-black hover:cursor-pointer">Project</button>
               </div>
             </div>
 
-            <button className="cursor-pointer hover:text-black transition-colors">
+            {/* Visible on both (or wrap in hidden md:block if you want it desktop only) */}
+            <button className="hidden md:block cursor-pointer hover:text-black transition-colors">
               (+91) 8369928617
             </button>
           </nav>
 
-          <div ref={heroRef} className="w-full px-12 pt-16 pb-12 relative z-10"
-
-          >
+          <div ref={heroRef} className="w-full px-12 pt-16 pb-12 relative z-10">
             <h1 className="hero-title font-editorial-heading text-[8vw] font-medium leading-[0.9] tracking-tight text-[#ffffff] uppercase">
               FACILITY &<br />
               LIFESTYLE SERVICES
             </h1>
 
-            <div className="flex flex-col md:flex-row justify-between items-end mt-8 gap-8">
+            <div className="flex flex-col md:flex-row justify-between items-end mt-8 gap-8 border-b border-[#ffffff]/60 pb-9">
               <p className="max-w-md text-[#ffffff]/80 text-sm leading-relaxed">
                 we create bespoke interiors that perfectly suit your lifestyle and needs. like experienced tailors.
               </p>
@@ -586,30 +659,45 @@ export default function PerfectDentroFullPage() {
               </div>
             </div>
 
-            {/* Services Slider - FIXED ANIMATION */}
-            <div ref={heroSliderRef} className="w-full overflow-hidden mt-12 py-10">
-              <div className="slider-wrapper flex gap-6 w-max">
-                {/* Duplicate items for seamless loop */}
-                {[...servicesList, ...servicesList].map((service, idx) => (
-                  <div
-                    key={idx}
-                    className="w-[350px] h-[450px] bg-[#d1c9a9] rounded-2xl p-4 flex flex-col justify-start border border-[#2b5c32]/10 shrink-0"
-                  >
-                    <h3 className="text-[#16251b] font-medium text-2xl mb-4">{service.title}</h3>
-                    <div className="mb-4 border border-[#2b5c32]/20 rounded-full px-4 py-1 text-[10px] uppercase text-[#2b5c32] inline-block w-fit">
-                      {service.title.split(' ')[0]}
+            {/* Full-Width Slider Section */}
+            <div className="w-full relative py-12 ">
+              {/* The Blurry Background Layer */}
+              <div className="absolute inset-0 bg-white/2 backdrop-blur-lg z-0 "></div>
+              {/* Services Slider - FIXED ANIMATION */}
+              <div ref={heroSliderRef} className="w-full  overflow-hidden mt-12 py-2">
+                <div className="slider-wrapper flex gap-6 w-max">
+                  {/* Duplicate items for seamless loop */}
+                  {[...servicesList, ...servicesList].map((service, idx) => (
+                    <div
+                      key={idx}
+                      className="w-[350px] h-[300px] bg-[#d1c9a9] rounded-2xl p-4 flex flex-col justify-start border border-[#2b5c32]/10 shrink-0"
+                      style={{
+                        backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('${service.img}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                      }}
+
+                    >
+                      <h3 className="text-[#ffffff] font-medium text-2xl mb-4">{service.title}</h3>
+                      <div className="mb-4 border border-[#2b5c32]/20 bg-white rounded-full px-4 py-1 text-[10px] uppercase text-[#2b5c32] inline-block w-fit">
+                        {service.title.split(' ')[0]}
+                      </div>
+                      <Link
+                        href={`/services/${service.id}`}
+                        className="text-[#ffffff]/80 text-sm flex items-center gap-1 cursor-pointer hover:underline"
+                      >
+                        ↗ More Details
+                      </Link>
                     </div>
-                    <div className="text-[#2b5c32] text-sm flex items-center gap-1 cursor-pointer hover:underline">
-                      ↗ More Details
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* Footer details */}
-            <div className="mt-8 flex justify-between items-center text-[10px] uppercase tracking-widest text-[#2b5c32]">
-              <span>[ OUR OBJECTS ]</span>
+            <div className="mt-8 flex justify-between items-center text-sm uppercase tracking-widest text-[#ffffff]">
+              <span>[ OUR OBJECTIVE ]</span>
               <div className="flex flex-col items-end gap-1">
                 <span>[01/06] mark</span>
                 <span>DELIVERING TRUST, QUALITY & RELIABILITY</span>
@@ -624,7 +712,7 @@ export default function PerfectDentroFullPage() {
           {/* ABOUT BRAND INTRODUCTION SECTION */}
           <div
             ref={aboutRef}
-            className="grid grid-cols-1 lg:grid-cols-12 w-full border-b border-[#2b5c32]/10 bg-[#ede6cb] relative z-10 overflow-hidden"
+            className="grid grid-cols-1 lg:grid-cols-12 w-full border-b border-[#2b5c32]/10 bg-[#FBF5DD] relative z-10 overflow-hidden"
           >
             <div className="about-left lg:col-span-4 p-8 md:p-12 lg:p-14 space-y-6 border-b lg:border-b-0 lg:border-r border-[#2b5c32]/10 z-10 bg-[#ede6cb]/10 backdrop-blur-sm">
               <h2 className="font-editorial-heading text-3xl md:text-4xl font-normal tracking-wide text-[#16251b] uppercase">
@@ -658,8 +746,7 @@ export default function PerfectDentroFullPage() {
                   </p>
                   <p className="about-text">
                     Sparking Stars is a comprehensive service provider offering a wide range of
-                    facility management and lifestyle solutions. With a strong foundation built
-                    on professionalism and trust, we deliver seamless services across
+                    facility management and lifestyle solutions. We deliver seamless services across
                     residential, commercial, and institutional sectors.
                   </p>
                 </div>
@@ -672,7 +759,7 @@ export default function PerfectDentroFullPage() {
             </div>
           </div>
 
-          {/* Tiny Diamond Row Separator */}
+
           <div className="w-full flex justify-end gap-2 px-12 py-3 bg-[#ede6cb] border-b border-[#2b5c32]/10 relative z-10">
             <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
             <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
@@ -682,72 +769,99 @@ export default function PerfectDentroFullPage() {
           {/* SERVICES SECTION */}
           <div
             ref={servicesRef}
-            className="w-full bg-[#FBF5DD] border-b border-[#2b5c32]/10 p-8 md:p-12 lg:p-16 flex flex-col space-y-12 relative z-10"
+            className="w-full bg-[#FDF5F5] border-b border-[#2b5c32]/10 p-8 md:p-12 lg:p-16 flex flex-col relative z-10"
           >
-            <div className="w-full py-4">
-              <h2 className="services-title font-editorial-heading text-5xl md:text-7xl lg:text-8xl font-normal tracking-[0.05em] text-[#16251b] uppercase relative inline-block select-none">
-                SERVIC
-                <span className="font-serif italic text-[#c5a880]/60 lowercase text-6xl md:text-8xl lg:text-9xl mx-[-0.05em] inline-block transform translate-y-[-0.05em]">
-                  e
-                </span>
-                S
+            {/* Section Header */}
+            <div className="w-full mb-16">
+              <h2 className="text-[10vw] font-medium leading-[0.9] tracking-tighter text-[#1a1a1a] uppercase">
+                Find the service <br /> you need
               </h2>
+              <p className="mt-6 text-sm text-[#666] max-w-[200px]">
+                ↳ It doesn't matter whether you know where to start or not, we will always point you in the right direction.
+              </p>
             </div>
 
-            <div className="w-full flex flex-col border-t border-[#2b5c32]/20">
-              {servicesList.map((service, index) => {
-                const isOpen = activeService === index;
-                return (
-                  <div
-                    key={index}
-                    className="service-item w-full border-b border-[#2b5c32]/20 py-6 md:py-8 flex flex-col transition-all duration-300"
-                    onMouseEnter={() => setActiveService(index)}
-                  >
-                    <Link
-                      href={`/services/${service.id}`}
-                      className="w-full flex justify-between items-start cursor-pointer group text-[#16251b]"
-                    >
-                      <div className="flex items-start space-x-12 md:space-x-24">
-                        <span className="font-sans text-[11px] tracking-widest text-[#2b5c32]/50 pt-1 font-medium">
-                          {service.num}
-                        </span>
-                        <h3 className="font-editorial-heading text-lg md:text-2xl font-normal tracking-wide uppercase transition-colors group-hover:text-[#2b5c32]">
-                          {service.title}
-                        </h3>
-                      </div>
+            {/* Services Stacking List */}
+            <div className="w-full flex flex-col">
+              {servicesList.map((service, index) => (
+                <Link
+                  key={service.id}
+                  href={`/services/${service.id}`}
+                  style={{
+                    zIndex: index + 1,
+                    background: `hsl(0, 55%, ${91 - index * 2}%)`,
+                  }}
+                  className="group relative w-full sticky top-0 border-t border-black/[0.07] overflow-hidden transition-colors duration-300"
+                >
+                  {/* Main row — always visible */}
+                  <div className="flex items-center justify-between px-8 md:px-12 py-10 md:py-12">
+                    <h3 className="font-editorial-heading text-4xl md:text-6xl lg:text-[5vw] font-black
+                         text-black/[0.13] uppercase tracking-tight leading-none
+                         transition-colors duration-300 group-hover:text-black/80">
+                      {service.title}
+                    </h3>
 
-                      <div className="text-xl font-light font-sans text-[#2b5c32]/60 w-6 h-6 flex items-center justify-center select-none">
-                        {isOpen ? '—' : '+'}
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      <span className="text-[10px] font-mono text-black/35">{service.num}.</span>
+                      {/* Arrow — rotates in on hover */}
+                      <div className="w-9 h-9 rounded-full border border-black/20 flex items-center
+                            justify-center opacity-0 -rotate-45
+                            transition-all duration-300
+                            group-hover:opacity-100 group-hover:rotate-0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2">
+                          <path d="M7 17L17 7M17 7H7M17 7V17" />
+                        </svg>
                       </div>
-                    </Link>
+                    </div>
+                  </div>
 
-                    <div
-                      className={`grid transition-all duration-500 ease-in-out overflow-hidden ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0'
-                        }`}
-                    >
-                      <div className="overflow-hidden pl-16 md:pl-32 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                        <div className="md:col-span-8 space-y-4">
-                          <p className="text-[#2b5c32]/80 text-xs md:text-sm tracking-wide leading-relaxed font-sans max-w-xl">
+                  {/* Drawer — slides open on hover */}
+                  <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr]
+                        transition-all duration-[450ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
+                    <div className="overflow-hidden">
+                      <div className="px-8 md:px-12 pb-8 flex flex-col md:flex-row gap-6 md:gap-10 items-start">
+
+                        {/* Thumbnail */}
+                        <div className="w-full md:w-40 h-24 md:h-28 rounded-lg overflow-hidden shrink-0 bg-black/10">
+                          <img
+                            src={service.img}
+                            alt={service.title}
+                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100
+                             scale-105 group-hover:scale-100 transition-all duration-500"
+                          />
+                        </div>
+
+                        {/* Text content */}
+                        <div className="flex flex-col">
+                          <p className="text-sm text-black/55 leading-relaxed max-w-sm">
                             {service.desc}
                           </p>
-                          <Link
-                            href={`/services/${service.id}`}
-                            className="text-[10px] font-bold tracking-[0.2em] text-[#2b5c32] uppercase underline cursor-pointer hover:text-[#16251b] inline-block transition-colors"
-                          >
-                            Read Details →
-                          </Link>
-                        </div>
-                        <div className="md:col-span-4 flex justify-end">
-                          <div className="w-full max-w-[200px] aspect-[3/4] bg-[#dfd7b9] border border-[#2b5c32]/10 shadow-inner relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-[#2b5c32]/5 to-transparent opacity-60" />
-                            <div className="w-full h-full bg-[#ede6cb]/40 transition-transform duration-500 group-hover:scale-102" />
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {service.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[10px] font-mono text-black/45 border border-black/18
+                                 px-3 py-1 rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
                           </div>
+                          <p className="text-[11px] font-semibold uppercase tracking-widest
+                              text-black/60 mt-4 flex items-center gap-2">
+                            Explore service
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" strokeWidth="2.5">
+                              <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                </Link>
+              ))}
             </div>
           </div>
 
@@ -762,80 +876,306 @@ export default function PerfectDentroFullPage() {
               style={{ willChange: 'transform' }}
             >
               {/* PANEL 1: MEET OUR VISION */}
-              <div className="horizontal-panel w-screen h-full flex-shrink-0 border-r border-[#2b5c32]/10 bg-[#ede6cb] p-8 md:p-12 lg:p-16 flex flex-col justify-center space-y-8">
-                <div className="panel-content flex flex-col md:flex-row md:items-start justify-between w-full gap-4 max-w-[1300px] mx-auto">
-                  <h2 className="panel-item font-editorial-heading text-4xl md:text-5xl font-normal tracking-widest text-[#16251b] uppercase">
-                    MEET OUR VISION
-                  </h2>
-                  <p className="panel-item text-[#2b5c32]/80 text-[10px] tracking-widest uppercase max-w-xl leading-relaxed pt-2">
-                    To become a trusted one-stop solution for integrated
-                    services across industries. Deliver high-quality, reliable, and customer-centric
-                    services through innovation, skilled manpower, and
-                    operational excellence.
+              <div className="horizontal-panel w-screen h-full flex-shrink-0 border-r border-[#2b5c32]/10 bg-[#ede6cb] p-8 md:p-12 lg:p-16 flex flex-col justify-center space-y-8 overflow-hidden">
 
-                  </p>
+                {/* Header row */}
+                <div className="panel-content flex flex-col md:flex-row md:items-start justify-between w-full gap-4 max-w-[1300px] mx-auto">
+                  <div className="space-y-3">
+                    {/* Eyebrow */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-px bg-[#2b5c32]/40" />
+                      <span className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">Est. 2018</span>
+                    </div>
+                    <h2 className="panel-item font-editorial-heading text-5xl md:text-6xl font-normal tracking-widest text-[#16251b] uppercase leading-[1.0]">
+                      MEET OUR<br />VISION
+                    </h2>
+                  </div>
+
+                  <div className="flex flex-col gap-4 pt-2 max-w-md">
+                    <p className="panel-item text-[#2b5c32]/70 text-[10px] tracking-[0.16em] uppercase leading-[2]">
+                      To become a trusted one-stop solution for integrated services across industries. Deliver high-quality, reliable, and customer-centric services through innovation, skilled manpower, and operational excellence.
+                    </p>
+                    {/* Inline stat pills */}
+                    <div className="flex gap-3 flex-wrap">
+                      {[['500+', 'Happy Clients'], ['6', 'Core Services'], ['Pan-India', 'Coverage']].map(([val, label]) => (
+                        <div key={label} className="border border-[#2b5c32]/20 rounded-full px-4 py-1.5 flex items-center gap-2">
+                          <span className="font-editorial-heading text-[#16251b] text-sm">{val}</span>
+                          <span className="text-[8px] font-mono tracking-[0.2em] uppercase text-[#2b5c32]/50">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="panel-item w-full max-w-[1300px] mx-auto aspect-[2.1/1] bg-[#dfd7b9]/40 border border-[#2b5c32]/10 rounded-lg relative flex items-center justify-center group overflow-hidden">
-                  <button className="w-20 h-20 rounded-full border border-[#2b5c32]/20 bg-white/90 backdrop-blur-md flex items-center justify-center text-zinc-700 group-hover:scale-105 group-hover:border-[#2b5c32] group-hover:text-[#2b5c32] transition-all duration-500 z-10 shadow-md">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                      className="w-7 h-7 ml-0.5"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </button>
-                  <div className="absolute top-8 right-12 text-right flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 bg-[#2b5c32] rounded-tr-full"></div>
-                    <span className="font-editorial-heading tracking-[0.15em] text-lg text-[#16251b] font-bold">
-                      DENTRO
+                {/* Video frame */}
+                <div className="panel-item w-full max-w-[1300px] mx-auto aspect-[2.1/1] border border-[#2b5c32]/15 rounded-xl relative flex items-center justify-center group overflow-hidden bg-[#d4cca8]">
+
+                  {/* Animated ambient background */}
+                  <div
+                    className="absolute inset-0 opacity-30"
+                    style={{
+                      background: 'radial-gradient(ellipse 60% 50% at 20% 60%, #2b5c32 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 75% 30%, #16251b 0%, transparent 65%)',
+                      animation: 'visionPulse 6s ease-in-out infinite alternate',
+                    }}
+                  />
+
+                  {/* Grain texture overlay */}
+                  <div
+                    className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                      backgroundSize: '180px',
+                    }}
+                  />
+
+                  {/* Animated scanning line */}
+                  <div
+                    className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                  >
+                    <div
+                      className="absolute left-0 right-0 h-px bg-[#2b5c32]/20"
+                      style={{ animation: 'scanLine 3s linear infinite' }}
+                    />
+                  </div>
+
+                  {/* Corner marks */}
+                  {[
+                    'top-4 left-4 border-t border-l',
+                    'top-4 right-4 border-t border-r',
+                    'bottom-4 left-4 border-b border-l',
+                    'bottom-4 right-4 border-b border-r',
+                  ].map((cls, i) => (
+                    <div
+                      key={i}
+                      className={`absolute w-5 h-5 border-[#2b5c32]/30 ${cls} opacity-0 group-hover:opacity-100 transition-all duration-500`}
+                      style={{ transitionDelay: `${i * 60}ms` }}
+                    />
+                  ))}
+
+                  {/* Grid lines */}
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+                    style={{
+                      backgroundImage: 'linear-gradient(#2b5c32 1px, transparent 1px), linear-gradient(90deg, #2b5c32 1px, transparent 1px)',
+                      backgroundSize: '60px 60px',
+                    }}
+                  />
+
+                  {/*  brand mark */}
+                  <div className="absolute top-6 right-8 flex items-center gap-2 z-10">
+                    <div className="w-2 h-2 bg-[#2b5c32] rounded-tr-full" />
+                    <span className="font-editorial-heading tracking-[0.2em] text-base text-[#16251b] font-bold">Sparking Star</span>
+                  </div>
+
+                  {/* Bottom-left metadata */}
+                  <div className="absolute bottom-6 left-8 flex items-end gap-6 z-10">
+                    <div>
+                      <p className="text-[8px] font-mono tracking-[0.25em] uppercase text-[#2b5c32]/40 mb-0.5">Format</p>
+                      <p className="text-[10px] font-mono tracking-wider text-[#16251b]/60">4K · 16:9</p>
+                    </div>
+                    <div className="w-px h-6 bg-[#2b5c32]/20" />
+                    <div>
+                      <p className="text-[8px] font-mono tracking-[0.25em] uppercase text-[#2b5c32]/40 mb-0.5">Duration</p>
+                      <p className="text-[10px] font-mono tracking-wider text-[#16251b]/60">03:24</p>
+                    </div>
+                    <div className="w-px h-6 bg-[#2b5c32]/20" />
+                    <div>
+                      <p className="text-[8px] font-mono tracking-[0.25em] uppercase text-[#2b5c32]/40 mb-0.5">Year</p>
+                      <p className="text-[10px] font-mono tracking-wider text-[#16251b]/60">2024</p>
+                    </div>
+                  </div>
+
+                  {/* Bottom-right: Live indicator */}
+                  <div className="absolute bottom-6 right-8 flex items-center gap-2 z-10">
+                    <span
+                      className="block w-1.5 h-1.5 rounded-full bg-[#2b5c32]"
+                      style={{ animation: 'liveDot 1.8s ease-in-out infinite' }}
+                    />
+                    <span className="text-[8px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/60">Brand Film</span>
+                  </div>
+
+                  {/* Play button — pulsing rings */}
+                  <div className="relative z-10 flex items-center justify-center">
+                    {/* Outer pulse rings */}
+                    <div
+                      className="absolute w-32 h-32 rounded-full border border-[#2b5c32]/15"
+                      style={{ animation: 'ringPulse 2.5s ease-out infinite' }}
+                    />
+                    <div
+                      className="absolute w-24 h-24 rounded-full border border-[#2b5c32]/20"
+                      style={{ animation: 'ringPulse 2.5s ease-out infinite 0.6s' }}
+                    />
+
+                    <button className="relative w-20 h-20 rounded-full border border-[#2b5c32]/25 bg-[#ede6cb]/90 backdrop-blur-md flex items-center justify-center text-[#2b5c32] group-hover:bg-[#2b5c32] group-hover:border-[#2b5c32] group-hover:text-[#ede6cb] transition-all duration-500 shadow-lg">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                        className="w-6 h-6 ml-0.5 transition-transform duration-300 group-hover:scale-110"
+                      >
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Hover: center label */}
+                  <div className="absolute inset-x-0 top-6 flex justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <span className="text-[8px] font-mono tracking-[0.4em] uppercase text-[#2b5c32]/40">
+                      Click to play brand film
                     </span>
                   </div>
+
                 </div>
+
+                {/* Keyframes */}
+                <style>{`
+    @keyframes visionPulse {
+      0%   { opacity: 0.20; transform: scale(1); }
+      100% { opacity: 0.40; transform: scale(1.06); }
+    }
+    @keyframes ringPulse {
+      0%   { transform: scale(0.85); opacity: 0.6; }
+      100% { transform: scale(1.5);  opacity: 0; }
+    }
+    @keyframes liveDot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+    @keyframes scanLine {
+      0%   { top: -2px; }
+      100% { top: 100%; }
+    }
+  `}</style>
               </div>
 
-              {/* PANEL 2: OUR PROJECT MESH GRID */}
+              {/* PANEL 2: OUR PROJECT */}
               <div
                 ref={projectsRef}
-                className="horizontal-panel w-screen h-full flex-shrink-0 grid grid-cols-1 lg:grid-cols-12 bg-[#ede6cb]"
+                className="horizontal-panel w-screen h-full flex-shrink-0 grid grid-cols-1 lg:grid-cols-12 bg-[#ede6cb] overflow-hidden"
               >
-                <div className="lg:col-span-5 p-8 md:p-12 lg:p-16 flex flex-col justify-between space-y-12 bg-[#ede6cb]">
-                  <div className="panel-content space-y-6">
-                    <div className="panel-item flex gap-2">
-                      <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
-                      <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
-                      <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
+                {/* LEFT: Info column */}
+                <div className="lg:col-span-4 p-8 md:p-12 lg:p-16 flex flex-col justify-between bg-[#ede6cb] relative z-10">
+                  <div className="space-y-8">
+                    {/* Decorative dots */}
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="block w-1 h-1 rounded-full bg-[#2b5c32] opacity-60"
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                        />
+                      ))}
                     </div>
-                    <h2 className="panel-item font-editorial-heading text-4xl md:text-5xl font-normal tracking-widest text-[#16251b] uppercase">
-                      OUR PROJECT
-                    </h2>
-                    <p className="panel-item text-[#2b5c32]/80 text-[10px] tracking-[0.14em] uppercase leading-[1.8] max-w-sm">
-                      OUR INSPIRED SOLUTIONS HAVE HELPED SHAPE MODERN ACOUSTIC DESIGN. ALLURING SPACES,
-                      INTERNATIONALLY RECOGNISED FOR THEIR ARCHITECTURAL ELEGANCE AND EXCEPTIONAL SOUND MANAGEMENT
-                      LIVE HERE.
+
+                    {/* Heading with line reveal */}
+                    <div className="overflow-hidden">
+                      <h2 className="panel-item font-editorial-heading text-5xl md:text-6xl font-normal tracking-widest text-[#16251b] uppercase leading-[1.05] translate-y-0">
+                        OUR<br />PROJECT
+                      </h2>
+                    </div>
+
+                    {/* Thin rule */}
+                    <div className="w-8 h-px bg-[#2b5c32]/40" />
+
+                    <p className="panel-item text-[#2b5c32]/70 text-[10px] tracking-[0.16em] uppercase leading-[2] max-w-[260px]">
+                      Our inspired solutions have helped shape modern acoustic design. Alluring spaces, internationally recognised for their architectural elegance live here.
                     </p>
+
+                    {/* Counter */}
+                    <div className="flex gap-8 pt-4">
+                      <div>
+                        <p className="font-editorial-heading text-3xl text-[#16251b] tracking-tight">24+</p>
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-[#2b5c32]/60 mt-1">Projects</p>
+                      </div>
+                      <div className="w-px bg-[#2b5c32]/20" />
+                      <div>
+                        <p className="font-editorial-heading text-3xl text-[#16251b] tracking-tight">12</p>
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-[#2b5c32]/60 mt-1">Countries</p>
+                      </div>
+                      <div className="w-px bg-[#2b5c32]/20" />
+                      <div>
+                        <p className="font-editorial-heading text-3xl text-[#16251b] tracking-tight">8yr</p>
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-[#2b5c32]/60 mt-1">Experience</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="panel-item">
-                    <button className="border border-[#2b5c32]/30 text-[#2b5c32] text-[10px] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-full hover:border-[#2b5c32] hover:text-black transition-all duration-300 transform hover:scale-105">
+
+                  {/* CTA */}
+                  <div className="panel-item pt-8">
+                    <button className="group flex items-center gap-3 border border-[#2b5c32]/30 text-[#2b5c32] text-[9px] font-bold tracking-[0.3em] uppercase px-7 py-3.5 rounded-full hover:bg-[#2b5c32] hover:text-[#ede6cb] hover:border-[#2b5c32] transition-all duration-500">
                       SEE ALL PROJECTS
+                      <svg
+                        className="w-3 h-3 -rotate-45 group-hover:rotate-0 transition-transform duration-300"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                      >
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
                     </button>
                   </div>
                 </div>
 
-                <div className="lg:col-span-7 grid grid-cols-4 divide-x divide-[#2b5c32]/10 border-t lg:border-t-0 lg:border-l border-[#2b5c32]/10 overflow-hidden relative h-full">
-                  <div className="panel-item h-full w-full bg-[#dfd7b9]/40 hover:bg-[#dfd7b9]/60 transition-colors relative group cursor-pointer" />
-                  <div className="panel-item h-full w-full bg-[#ede6cb]/40 hover:bg-[#ede6cb]/60 transition-colors relative group cursor-pointer" />
-                  <div className="panel-item h-full w-full bg-[#FBF5DD] flex flex-col justify-between p-4 py-8 group cursor-pointer border-x border-[#2b5c32]/10 relative z-10 shadow-sm">
-                    <div className="font-editorial-heading text-[#16251b] uppercase tracking-[0.25em] text-lg sm:text-xl font-normal [writing-mode:vertical-lr] rotate-180 mx-auto my-auto leading-none">
-                      CIRCLE SQUARE
+                {/* RIGHT: Project cards grid */}
+                <div className="lg:col-span-8 grid grid-cols-3 divide-x divide-[#2b5c32]/10 border-l border-[#2b5c32]/10 h-full overflow-hidden">
+
+                  {/* Card 1 */}
+                  <div className="group relative h-full overflow-hidden cursor-pointer bg-[#d8d0b2]">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center scale-110 group-hover:scale-100 transition-transform duration-700 ease-out"
+                      style={{ backgroundImage: "url('images/building-painting-service.png')" }}
+                    />
+                    <div className="absolute inset-0 bg-[#16251b]/30 group-hover:bg-[#16251b]/10 transition-colors duration-500" />
+                    {/* Hover reveal label */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400">
+                      <p className="text-[9px] font-mono tracking-[0.25em] text-[#ede6cb]/70 uppercase mb-1">2022</p>
+                      <p className="font-editorial-heading text-[#ede6cb] text-lg uppercase tracking-widest leading-tight">
+                        Building<br />Painting
+                      </p>
                     </div>
-                    <span className="text-[10px] text-[#2b5c32]/60 tracking-widest text-center block font-mono">
-                      2021
-                    </span>
+                    {/* Index */}
+                    <span className="absolute top-5 left-5 text-[9px] font-mono text-[#ede6cb]/50 tracking-widest">01</span>
                   </div>
-                  <div className="panel-item h-full w-full bg-[#dfd7b9]/30 hover:bg-[#dfd7b9]/50 transition-colors relative group cursor-pointer" />
+                  {/* Card 2 */}
+                  <div className="group relative h-full overflow-hidden cursor-pointer bg-[#d8d0b2]">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center scale-110 group-hover:scale-100 transition-transform duration-700 ease-out"
+                      style={{ backgroundImage: "url('images/building-painting-service.png')" }}
+                    />
+                    <div className="absolute inset-0 bg-[#16251b]/30 group-hover:bg-[#16251b]/10 transition-colors duration-500" />
+                    {/* Hover reveal label */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400">
+                      <p className="text-[9px] font-mono tracking-[0.25em] text-[#ede6cb]/70 uppercase mb-1">2022</p>
+                      <p className="font-editorial-heading text-[#ede6cb] text-lg uppercase tracking-widest leading-tight">
+                        Building<br />Painting
+                      </p>
+                    </div>
+                    {/* Index */}
+                    <span className="absolute top-5 left-5 text-[9px] font-mono text-[#ede6cb]/50 tracking-widest">01</span>
+                  </div>
+                  {/* Card 3 */}
+                  <div className="group relative h-full overflow-hidden cursor-pointer bg-[#cfc7a8]">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center scale-110 group-hover:scale-100 transition-transform duration-700 ease-out"
+                      style={{ backgroundImage: "url('images/security-service.png')" }}
+                    />
+                    <div className="absolute inset-0 bg-[#16251b]/40 group-hover:bg-[#16251b]/15 transition-colors duration-500" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400">
+                      <p className="text-[9px] font-mono tracking-[0.25em] text-[#ede6cb]/70 uppercase mb-1">2023</p>
+                      <p className="font-editorial-heading text-[#ede6cb] text-lg uppercase tracking-widest leading-tight">
+                        Security<br />Services
+                      </p>
+                    </div>
+                    <span className="absolute top-5 left-5 text-[9px] font-mono text-[#ede6cb]/50 tracking-widest">03</span>
+                  </div>
+                </div>
+
+                {/* Bottom ticker strip — spans full width */}
+                <div className="lg:col-span-12 border-t border-[#2b5c32]/10 overflow-hidden bg-[#ede6cb] py-3">
+                  <div className="flex animate-marquee whitespace-nowrap gap-0">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <span key={i} className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/40 px-8">
+                        Architecture ✦ Interior Design ✦ Acoustic Solutions ✦ Spatial Planning ✦ Heritage Restoration
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -882,11 +1222,172 @@ export default function PerfectDentroFullPage() {
           </div>
 
           {/* GIANT OVAL CAPSULE CTA */}
+          {/* ─── CTA SECTION ─── */}
           <div className="cta-section w-full bg-[#ede6cb] p-8 md:p-14 lg:p-16 text-center border-b border-[#2b5c32]/10 flex flex-col items-center relative z-30">
-            <button className="w-full max-w-4xl bg-[#2b5c32] text-white text-center py-6 md:py-8 lg:py-9 rounded-full font-editorial-heading font-normal text-2xl md:text-4xl lg:text-5xl tracking-widest hover:bg-[#123617] transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-[1.02] shadow-md shadow-emerald-900/10">
+            <button
+              onClick={() => setFormOpen(true)}
+              className="w-full max-w-4xl bg-[#2b5c32] text-white text-center py-6 md:py-8 lg:py-9 rounded-full font-editorial-heading font-normal text-2xl md:text-4xl lg:text-5xl tracking-widest hover:bg-[#123617] transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-[1.02] shadow-md shadow-emerald-900/10"
+            >
               START YOUR PROJECT NOW
             </button>
           </div>
+
+          {/* ─── MODAL OVERLAY ─── */}
+          {formOpen && (
+            <div
+              ref={overlayRef}
+              onClick={(e) => { if (e.target === overlayRef.current) setFormOpen(false); }}
+              className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+              style={{ backgroundColor: 'rgba(22, 37, 27, 0.65)', backdropFilter: 'blur(8px)' }}
+            >
+              <div
+                className="relative w-full max-w-lg bg-[#ede6cb] rounded-2xl overflow-hidden shadow-2xl"
+                style={{ animation: 'modalIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both' }}
+              >
+                {/* Top accent bar */}
+                <div className="h-1 w-full bg-[#2b5c32]" />
+
+                {/* Header */}
+                <div className="px-8 pt-8 pb-6 flex items-start justify-between border-b border-[#2b5c32]/10">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#2b5c32]" />
+                      <span className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">New Enquiry</span>
+                    </div>
+                    <h3 className="font-editorial-heading text-2xl md:text-3xl text-[#16251b] tracking-widest uppercase leading-tight">
+                      Let's Start<br />Your Project
+                    </h3>
+                    <p className="text-[10px] tracking-[0.15em] uppercase text-[#2b5c32]/50 mt-2 leading-relaxed">
+                      Fill in your details and we'll reach<br />out within 24 hours.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setFormOpen(false)}
+                    className="w-8 h-8 rounded-full border border-[#2b5c32]/20 flex items-center justify-center text-[#2b5c32]/50 hover:bg-[#2b5c32] hover:text-[#ede6cb] hover:border-[#2b5c32] transition-all duration-300 shrink-0 mt-1"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Form body */}
+                <div className="px-8 py-7">
+                  {sent ? (
+                    // ─── Success state ───
+                    <div className="flex flex-col items-center justify-center py-10 gap-4">
+                      <div
+                        className="w-14 h-14 rounded-full bg-[#2b5c32] flex items-center justify-center"
+                        style={{ animation: 'modalIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
+                      >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ede6cb" strokeWidth="2.5">
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="font-editorial-heading text-xl text-[#16251b] tracking-widest uppercase">Message Sent!</p>
+                      <p className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#2b5c32]/50 text-center">
+                        We'll be in touch within 24 hours.
+                      </p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
+                      {/* Name */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">
+                          Full Name <span className="text-[#2b5c32]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formState.name}
+                          onChange={(e) => setFormState(p => ({ ...p, name: e.target.value }))}
+                          placeholder="Rahul Sharma"
+                          className="w-full bg-transparent border border-[#2b5c32]/20 rounded-lg px-4 py-3 text-sm text-[#16251b] placeholder-[#2b5c32]/25 tracking-wide outline-none focus:border-[#2b5c32]/60 focus:bg-[#dfd7b9]/20 transition-all duration-200"
+                        />
+                      </div>
+
+                      {/* Email */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">
+                          Email Address <span className="text-[#2b5c32]">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={formState.email}
+                          onChange={(e) => setFormState(p => ({ ...p, email: e.target.value }))}
+                          placeholder="rahul@example.com"
+                          className="w-full bg-transparent border border-[#2b5c32]/20 rounded-lg px-4 py-3 text-sm text-[#16251b] placeholder-[#2b5c32]/25 tracking-wide outline-none focus:border-[#2b5c32]/60 focus:bg-[#dfd7b9]/20 transition-all duration-200"
+                        />
+                      </div>
+
+                      {/* Phone */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">
+                          Contact Number <span className="text-[#2b5c32]">*</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <div className="border border-[#2b5c32]/20 rounded-lg px-3 flex items-center gap-1.5 text-[11px] text-[#2b5c32]/60 font-mono shrink-0">
+                            🇮🇳 +91
+                          </div>
+                          <input
+                            type="tel"
+                            required
+                            value={formState.phone}
+                            onChange={(e) => setFormState(p => ({ ...p, phone: e.target.value }))}
+                            placeholder="98765 43210"
+                            pattern="[0-9]{10}"
+                            title="Enter 10-digit mobile number"
+                            className="flex-1 bg-transparent border border-[#2b5c32]/20 rounded-lg px-4 py-3 text-sm text-[#16251b] placeholder-[#2b5c32]/25 tracking-wide outline-none focus:border-[#2b5c32]/60 focus:bg-[#dfd7b9]/20 transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+
+                      {error && (
+                        <p className="text-[10px] font-mono tracking-wider text-red-600/70 text-center">{error}</p>
+                      )}
+
+                      {/* Submit */}
+                      <button
+                        type="submit"
+                        disabled={sending}
+                        className="w-full mt-1 bg-[#2b5c32] text-[#ede6cb] rounded-full py-4 text-[10px] font-mono font-bold tracking-[0.35em] uppercase flex items-center justify-center gap-3 hover:bg-[#123617] disabled:opacity-60 transition-all duration-300 hover:-translate-y-0.5"
+                      >
+                        {sending ? (
+                          <>
+                            <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                            </svg>
+                            Sending…
+                          </>
+                        ) : (
+                          <>
+                            Send Enquiry
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                          </>
+                        )}
+                      </button>
+
+                      <p className="text-[8px] font-mono tracking-[0.2em] uppercase text-[#2b5c32]/30 text-center">
+                        Your details are safe with us. No spam, ever.
+                      </p>
+                    </form>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal animation keyframe */}
+              <style>{`
+      @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.88) translateY(24px); }
+        to   { opacity: 1; transform: scale(1)    translateY(0);    }
+      }
+    `}</style>
+            </div>
+          )}
 
           {/* BOTTOM GLOBAL FOOTER EDGE */}
           <div className="w-full flex justify-center gap-2.5 py-6 bg-[#ede6cb] text-center relative z-30">
@@ -932,7 +1433,7 @@ export default function PerfectDentroFullPage() {
                     href="mailto:sparkingstarsenterprises@gmail.com "
                     className="text-[#16251b] font-mono tracking-normal text-xs font-normal lowercase group-hover:text-[#2b5c32] transition-colors"
                   >
-                    sparkingstarsenterprises@gmail.com 
+                    sparkingstarsenterprises@gmail.com
                   </a>
                 </div>
                 <div className="footer-link p-6 md:p-8 flex justify-between items-center group cursor-pointer hover:bg-[#ede6cb]/30 transition-colors">
@@ -953,8 +1454,8 @@ export default function PerfectDentroFullPage() {
 
 
           <div className="w-full border-t border-[#2b5c32]/10 bg-[#dfd7b9] h-4 relative z-30"></div>
-         </div>
         </div>
       </div>
-      );
+    </div>
+  );
 }
