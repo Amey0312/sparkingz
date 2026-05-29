@@ -1,717 +1,1495 @@
-"use client";
+'use client';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import Image from 'next/image';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+import Link from 'next/link';
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import * as THREE from "three";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import { ScrollToPlugin } from "gsap/dist/ScrollToPlugin";
-import { TextPlugin } from "gsap/dist/TextPlugin";
-import Lenis from "lenis";
-import InfiniteSlider from "./slider";
-import { MessageCircle } from "lucide-react";
-import Navbar from "./navbar";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, TextPlugin);
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 }
+const EMAILJS_SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!;
+const EMAILJS_TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!;
+const EMAILJS_PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!;
 
-// --- SHADER MATERIAL FOR LIQUID BACKGROUND ---
-const LiquidBackground = () => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const { viewport } = useThree();
+export default function PerfectDentroFullPage() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeService, setActiveService] = useState(0);
+  const [activeSection, setActiveSection] = useState('home');
 
-  const uniforms = useMemo(() => ({
-    uTime: { value: 0 },
-    // 🔥 UPDATED: Organic Palette Background Colors
-    uColorBg: { value: new THREE.Color("#FDFCF8") },     // Rice Paper
-    uColorMoss: { value: new THREE.Color("#5D7052") },   // Moss Green
-    uColorClay: { value: new THREE.Color("#C18C5D") },   // Terracotta
-    uScroll: { value: 0 },
-  }), []);
+  // Section refs for navigation
+  const heroRef = useRef<HTMLDivElement>(null);
+  const aboutRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
+  const projectsRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
 
-  useFrame((state) => {
-    if (meshRef.current) {
-      uniforms.uTime.value = state.clock.getElapsedTime() * 1.1;
-      const targetScroll = typeof window !== "undefined" ? window.scrollY / 2000 : 0;
-      uniforms.uScroll.value = THREE.MathUtils.lerp(uniforms.uScroll.value, targetScroll, 0.05);
-    }
-  });
 
-  return (
-    <mesh ref={meshRef} scale={[viewport.width, viewport.height, 1]}>
-      <planeGeometry args={[1, 1, 16, 16]} />
-      <shaderMaterial
-        uniforms={uniforms}
-        vertexShader={`
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `}
-        fragmentShader={`
-          uniform float uTime;
-          uniform float uScroll;
-          uniform vec3 uColorBg;
-          uniform vec3 uColorMoss;
-          uniform vec3 uColorClay;
-          varying vec2 vUv;
+  // ─── Add this state near your other useState hooks ───
+  const [formOpen, setFormOpen] = useState(false);
+  const [formState, setFormState] = useState({ name: '', email: '', phone: '' });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-          float noise(vec2 p) {
-            return sin(p.x * 10.0 + uTime) * sin(p.y * 20.0 + uTime);
-          }
-
-          void main() {
-            vec2 p = vUv;
-            float movement = sin(uTime * 0.2 + uScroll);
-            float n = noise(p + movement);
-            n += noise(p * 2.0 - uTime * 0.1);
-            // 🔥 UPDATED: Mixing Moss and Clay tones
-            vec3 color = mix(uColorBg, uColorMoss, n * 0.3);
-            color = mix(color, uColorClay, sin(uScroll * 3.0) * 0.1);
-            gl_FragColor = vec4(color, 1.0);
-          }
-        `}
-      />
-    </mesh>
-  );
-};
-
-// Interfaces
-interface Testimonial { id: string; tag: string; text: string; }
-interface Service { area: string; title: string; desc: string; items: string[]; badge?: string; }
-interface Stat { value: string; label: string; }
-interface Principle { num: string; title: string; body: string; }
-interface MousePosition { x: number; y: number; }
-
-const TESTIMONIALS: Testimonial[] = [
-  { id: "anon_xxxxA", tag: "asset claim, digital trace", text: "Vouch for the 20K easy claim. 100% supportive throughout the whole deal, deadass professional. Digital Threat Trace was spot on too." },
-  { id: "client_xxxxM", tag: "username claim, footprint cleanup", text: "Successfully claimed my desired handle — one everyone else failed on — in record time. Efficiency and professionalism was goated. Highly recommend for fast, secure acquisition." },
-  { id: "anon_xxxx4", tag: "username claim, profile management", text: "Completed a lot of successful deals lately! Claimed a username and handled my profile management in 12 hours flat. No cap, the fastest in the game." },
-  { id: "user_xxxx7", tag: "reputation fix, risk advisory", text: "10/10, goated max. Best for community reputation fixes and social media risk advisory. Claimed a username under an hour. Will definitely come back for more deals!" },
-  { id: "crypto_xxxxZ", tag: "blockchain trace, threat elimination", text: "Paid the full advance for a Block Chain Trace and threat elimination. Impressed with constant coordination and results in under 24hrs. An absolute legend." },
-  { id: "founder_xxxxK", tag: "dmca takedown, search suppression", text: "Sincere thanks for the DMCA takedowns and search result suppression. A beast in this business — anyone can work with them without any problems." },
-  { id: "agency_xxxxP", tag: "premium asset claim", text: "Just closed a $15k IG generic claim that others failed to deliver for months. Top-tier provider, the absolute pinnacle of this industry." },
-  { id: "pr_xxxxWQ", tag: "post removal, reputation fix", text: "Handled negative post removals and community reputation fixes in record time. Professionalism was 10/10, definitely the best in the game." },
-];
-
-const SERVICES: Service[] = [
-  { area: "Core Services", title: "Property Maintenance Solutions", desc: "Comprehensive property management backed by years of ethical, meticulous facility consulting.", items: ["Professional Housekeeping & deep cleaning", "Building Painting & aesthetic restoration", "Interior Designing & functional space planning", "Property safety"], badge: "● Premium Quality Control" },
-  { area: "Living Solutions", title: "Curated Housing", desc: "Paying Guest (PG) accommodations and Old Age Housing designed for comfort, safety, and community", items: ["Instagram, X, TikTok, YouTube, Reddit, WhatsApp", "Risk profiling and threat identification", "Real-time monitoring and response"] },
-  { area: "Specialized Care", title: "Compassionate Living", desc: "Providing serene and professionally managed old age housing solutions in Mumbai.", items: ["Copyright infringement removals", "Defamation and harassment content", "Impersonation account elimination"] },
-  { area: "Search & Visibility", title: "Search Result Suppression", desc: "Strategically suppress harmful or damaging results and reclaim your narrative online.", items: ["Google & Bing result management", "Reputation SEO and counter-content", "Entity knowledge panel corrections"] },
-];
-
-const STATS: Stat[] = [
-  { value: "$200+", label: "Units managed" },
-  { value: "6+", label: "Years Active" },
-  { value: "All", label: "Mumbai Sectors" },
-  { value: "100%", label: "Reliable Practice" },
-];
-
-const PRINCIPLES: Principle[] = [
-  { num: "01", title: "Ethics.", body: "Clear, honest, and client-first hospitality in every service engagement." },
-  { num: "02", title: "Quality.", body: "Meticulous standards in housekeeping, painting, and interior design to ensure your space is perfect." },
-  { num: "03", title: "Precision.", body: "Fast actions, measurable outcomes, zero ambiguity." },
-];
-
-export default function DominateSite(): React.ReactElement {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const heroTitleRef = useRef<HTMLHeadingElement>(null);
-  const loaderRef = useRef<HTMLDivElement>(null);
-  const counterRef = useRef<HTMLDivElement>(null);
-  const flashRef = useRef<HTMLDivElement>(null);
-  const mainContentRef = useRef<HTMLElement>(null);
-  const [showWaitlist, setShowWaitlist] = useState<boolean>(false);
-  const [mousePos, setMousePos] = useState<MousePosition>({ x: 0, y: 0 });
-  const [loaderComplete, setLoaderComplete] = useState<boolean>(false);
-  const cursorRef = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
-
+  // Close on Escape
   useEffect(() => {
-    
-    const lenis = new Lenis({
-      duration: 1.1,
-      smoothWheel: true,
-      lerp: 0.08,
-    });
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setFormOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
+  // Prevent body scroll when open
+  useEffect(() => {
+    document.body.style.overflow = formOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [formOpen]);
 
-    lenis.on("scroll", ScrollTrigger.update);
-
-    ScrollTrigger.scrollerProxy(document.body, {
-      scrollTop(value) {
-        return arguments.length
-          ? lenis.scrollTo(value as number, { immediate: true })
-          : lenis.scroll;
-      },
-      getBoundingClientRect() {
-        return {
-          top: 0,
-          left: 0,
-          width: window.innerWidth,
-          height: window.innerHeight,
-        };
-      },
-    });
-
-    ScrollTrigger.addEventListener("refresh", () =>
-      lenis.raf(performance.now())
-    );
-    ScrollTrigger.refresh();
-
-    const cursor = cursorRef.current;
-    if (!cursor) return;
-
-    let mouseX = 0;
-    let mouseY = 0;
-    let currentX = 0;
-    let currentY = 0;
-
-    const moveCursor = () => {
-      currentX += (mouseX - currentX) * 0.15;
-      currentY += (mouseY - currentY) * 0.15;
-      cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-      requestAnimationFrame(moveCursor);
-    };
-    moveCursor();
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX - 16;
-      mouseY = e.clientY + window.scrollY - 16;
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-
-    const targets = document.querySelectorAll(".hover-target");
-    const handleEnter = () => setIsHovering(true);
-    const handleLeave = () => setIsHovering(false);
-
-    targets.forEach((el) => {
-      el.addEventListener("mouseenter", handleEnter);
-      el.addEventListener("mouseleave", handleLeave);
-    });
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        defaults: { ease: "power3.out" },
-        onComplete: () => setLoaderComplete(true),
-      });
-
-      const counterObj = { value: 0 };
-
-      tl.to(counterObj, {
-        value: 100,
-        duration: 1,
-        ease: "power2.out",
-        onUpdate: () => {
-          if (counterRef.current) {
-            counterRef.current.textContent = Math.floor(
-              counterObj.value
-            ).toString();
-          }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+    setError('');
+    try {
+      const emailjs = (await import('@emailjs/browser')).default;
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          from_name: formState.name,
+          from_email: formState.email,
+          phone: formState.phone,
+          reply_to: formState.email,
         },
+        EMAILJS_PUBLIC_KEY
+      );
+      setSent(true);
+      setTimeout(() => {
+        setFormOpen(false);
+        setSent(false);
+        setFormState({ name: '', email: '', phone: '' });
+      }, 2800);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Core DOM element tracking references for GSAP Pinning
+  const scrollPinSectionRef = useRef<HTMLDivElement>(null);
+  const horizontalPanelsWrapperRef = useRef<HTMLDivElement>(null);
+  const heroSliderRef = useRef<HTMLDivElement>(null);
+
+  // Animation context ref how to fix
+  const ctxRef = useRef<gsap.Context | null>(null);
+
+  // Smooth scroll to section
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
+    if (ref.current) {
+      gsap.to(window, {
+        duration: 1.2,
+        scrollTo: { y: ref.current, offsetY: 0 },
+        ease: 'power3.inOut',
       });
+    }
+  };
 
-      tl.to(loaderRef.current, { opacity: 0, duration: 0.5 }, "-=0.3");
+  // Handle menu navigation
+  const handleNavClick = (section: string) => {
+    setIsMenuOpen(false);
+    switch (section) {
+      case 'home':
+        scrollToSection(heroRef);
+        break;
+      case 'about':
+        scrollToSection(aboutRef);
+        break;
+      case 'services':
+        scrollToSection(servicesRef);
+        break;
+      case 'projects':
+        scrollToSection(projectsRef);
+        break;
+      case 'contact':
+        scrollToSection(contactRef);
+        break;
+    }
+  };
 
-      tl.fromTo(
-        mainContentRef.current,
-        { y: 80, opacity: 0 },
-        { y: 0, opacity: 1, duration: 1 },
-        "-=0.3"
+  // Toggle menu
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  // Close menu on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMenuOpen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, []);
+
+  // Prevent scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
+
+  // Track active section while scrolling
+  useLayoutEffect(() => {
+    const sections = [
+      { ref: heroRef, name: 'home' },
+      { ref: aboutRef, name: 'about' },
+      { ref: servicesRef, name: 'services' },
+      { ref: projectsRef, name: 'projects' },
+      { ref: contactRef, name: 'contact' },
+    ];
+
+    const observers = sections.map(({ ref, name }) => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveSection(name);
+            }
+          });
+        },
+        { threshold: 0.3 }
       );
 
-      tl.to(".line-3", {
-        text: "Detail.",
-        duration: 1,
-        ease: "none",
-      });
-
-      const sections = gsap.utils.toArray<HTMLElement>(".story-section");
-
-      sections.forEach((section, i) => {
-        if (i === 0) return;
-
-        const elements = section.querySelectorAll(
-          "h2, h3, h4, p, .reveal, .reveal-card"
-        );
-
-        gsap.set(elements, { opacity: 0, y: 60 });
-
-        gsap.to(elements, {
-          opacity: 1,
-          y: 0,
-          duration: 0.9,
-          stagger: 0.08,
-          scrollTrigger: {
-            trigger: section,
-            start: "top 85%",
-          },
-        });
-      });
-    }, containerRef);
-
-    const track = document.querySelector(".testimonial-vertical-track") as HTMLElement;
-
-let loopTween: gsap.core.Tween | null = null;
-
-if (track) {
-  loopTween = gsap.to(track, {
-    yPercent: -50, // 🔥 instead of y: -height
-    duration: 25,  // smoother + slower
-    ease: "none",
-    repeat: -1,
-  });
-
-  const handlePause = () => loopTween?.pause();
-  const handleResume = () => loopTween?.resume();
-
-  track.addEventListener("mouseenter", handlePause);
-  track.addEventListener("mouseleave", handleResume);
-
-  (track as any)._cleanup = () => {
-    track.removeEventListener("mouseenter", handlePause);
-    track.removeEventListener("mouseleave", handleResume);
-  };
-}
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-
-      targets.forEach((el) => {
-        el.removeEventListener("mouseenter", handleEnter);
-        el.removeEventListener("mouseleave", handleLeave);
-      });
-
-      if (track && (track as any)._cleanup) {
-        (track as any)._cleanup();
+      if (ref.current) {
+        observer.observe(ref.current);
       }
 
-      loopTween?.kill();
-      ctx.revert();
-      lenis.destroy();
+      return observer;
+    });
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
     };
   }, []);
 
+  // Main GSAP animations
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      // Hero section animations
+      if (heroRef.current) {
+        gsap.from('.hero-title', {
+          y: 100,
+          opacity: 0,
+          duration: 1.2,
+          ease: 'power3.out',
+          delay: 0.2,
+        });
+
+        gsap.from('.hero-subtext', {
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+          delay: 0.5,
+        });
+
+        gsap.from('.hero-buttons', {
+          y: 20,
+          opacity: 0,
+          duration: 0.6,
+          ease: 'power3.out',
+          delay: 0.7,
+          stagger: 0.1,
+        });
+      }
+
+      // Hero Slider Animation - FIXED
+      if (heroSliderRef.current) {
+        const slider = heroSliderRef.current;
+        const sliderWrapper = slider.querySelector('.slider-wrapper');
+        if (sliderWrapper) {
+          const totalWidth = sliderWrapper.scrollWidth;
+          const duration = totalWidth / 100; // Adjust speed: higher = slower
+
+          gsap.to(sliderWrapper, {
+            x: -totalWidth / 2,
+            duration: duration,
+            ease: "none",
+            repeat: -1,
+            modifiers: {
+              x: gsap.utils.unitize(x => parseFloat(x) % (totalWidth / 2))
+            }
+          });
+        }
+      }
+
+      // About section animations
+      if (aboutRef.current) {
+        const aboutTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: aboutRef.current,
+            start: 'top 80%',
+            end: 'top 30%',
+            toggleActions: 'play none none reverse',
+          },
+        });
+
+        aboutTl
+          .from('.about-left', {
+            x: -50,
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power3.out',
+          })
+          .from(
+            '.about-left > *',
+            {
+              y: 30,
+              opacity: 0,
+              stagger: 0.15,
+              duration: 0.7,
+              ease: 'power3.out',
+            },
+            '-=0.5'
+          )
+          .from(
+            '.about-right',
+            {
+              x: 50,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+            },
+            '-=0.8'
+          )
+          .from(
+            '.about-text',
+            {
+              y: 20,
+              opacity: 0,
+              stagger: 0.1,
+              duration: 0.6,
+              ease: 'power3.out',
+            },
+            '-=0.6'
+          )
+          .from(
+            '.about-image',
+            {
+              scale: 0.95,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+            },
+            '-=0.5'
+          );
+      }
+
+      // Services section animations
+      if (servicesRef.current) {
+        const servicesTitle = servicesRef.current.querySelector('.services-title');
+        if (servicesTitle) {
+          gsap.from(servicesTitle, {
+            scrollTrigger: {
+              trigger: servicesRef.current,
+              start: 'top 80%',
+              toggleActions: 'play none none reverse',
+            },
+            y: 50,
+            opacity: 0,
+            duration: 1,
+            ease: 'power3.out',
+          });
+        }
+
+        const serviceItems = servicesRef.current.querySelectorAll('.service-item');
+        if (serviceItems.length > 0) {
+          gsap.set(serviceItems, { opacity: 1, y: 0 });
+
+          gsap.from(serviceItems, {
+            scrollTrigger: {
+              trigger: servicesRef.current,
+              start: 'top 70%',
+              toggleActions: 'play none none reverse',
+              once: false,
+            },
+            y: 40,
+            opacity: 0,
+            stagger: 0.12,
+            duration: 0.8,
+            ease: 'power3.out',
+          });
+        }
+      }
+
+      // Horizontal scroll section
+      const setupScrollTrigger = () => {
+        if (scrollPinSectionRef.current && horizontalPanelsWrapperRef.current) {
+          const panels = horizontalPanelsWrapperRef.current;
+          const scrollDistance = panels.scrollWidth - window.innerWidth;
+
+          const horizontalScroll = gsap.to(panels, {
+            x: -scrollDistance,
+            ease: 'none',
+          });
+
+          ScrollTrigger.create({
+            trigger: scrollPinSectionRef.current,
+            start: 'top top',
+            end: () => `+=${scrollDistance}`,
+            pin: true,
+            scrub: 1,
+            anticipatePin: 1,
+            animation: horizontalScroll,
+            invalidateOnRefresh: true,
+            pinSpacing: true,
+            refreshPriority: 1,
+          });
+
+          gsap.utils.toArray('.horizontal-panel').forEach((panel: any, index) => {
+            gsap.from(panel.querySelector('.panel-content'), {
+              scrollTrigger: {
+                trigger: panel,
+                containerAnimation: horizontalScroll,
+                start: 'left 80%',
+                end: 'left 20%',
+                toggleActions: 'play none none reverse',
+              },
+              y: 50,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+            });
+
+            gsap.from(panel.querySelectorAll('.panel-item'), {
+              scrollTrigger: {
+                trigger: panel,
+                containerAnimation: horizontalScroll,
+                start: 'left 70%',
+                end: 'left 20%',
+                toggleActions: 'play none none reverse',
+              },
+              y: 30,
+              opacity: 0,
+              stagger: 0.1,
+              duration: 0.7,
+              ease: 'power3.out',
+            });
+          });
+        }
+      };
+
+      requestAnimationFrame(() => {
+        setupScrollTrigger();
+        setTimeout(() => {
+          ScrollTrigger.refresh();
+        }, 100);
+      });
+
+      // Clients section animation
+      gsap.from('.client-header', {
+        scrollTrigger: {
+          trigger: '.client-header',
+          start: 'top 80%',
+          toggleActions: 'play none none reverse',
+        },
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power3.out',
+      });
+
+      gsap.from('.client-item', {
+        scrollTrigger: {
+          trigger: '.client-item',
+          start: 'top 85%',
+          toggleActions: 'play none none reverse',
+        },
+        scale: 0.95,
+        opacity: 0,
+        stagger: 0.08,
+        duration: 0.6,
+        ease: 'power3.out',
+      });
+
+      // CTA section animation
+      gsap.from('.cta-section', {
+        scrollTrigger: {
+          trigger: '.cta-section',
+          start: 'top 80%',
+          toggleActions: 'play none none reverse',
+        },
+        scale: 0.95,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+      });
+
+      // Footer animations
+      gsap.from('.footer-content', {
+        scrollTrigger: {
+          trigger: '.footer-content',
+          start: 'top 85%',
+          toggleActions: 'play none none reverse',
+        },
+        y: 40,
+        opacity: 0,
+        stagger: 0.15,
+        duration: 0.8,
+        ease: 'power3.out',
+      });
+
+      gsap.from('.footer-link', {
+        scrollTrigger: {
+          trigger: '.footer-link',
+          start: 'top 90%',
+          toggleActions: 'play none none reverse',
+        },
+        x: 20,
+        opacity: 0,
+        stagger: 0.08,
+        duration: 0.6,
+        ease: 'power3.out',
+      });
+    });
+
+    ctxRef.current = ctx;
+
+    let resizeTimer: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 250);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
+      ctx.revert();
+    };
+  }, []);
+
+  const servicesList = [
+    {
+      id: 'building-painting-service',
+      num: '01',
+      title: 'BUILDING PAINTING',
+      img: 'images/building-painting-service.png',
+      desc: 'Sourcing and styling bespoke design pieces, tailored artworks, and fine textile curation to elevate your personal spaces.',
+      tags: ['Exterior Painting', 'Interior Painting', 'Waterproofing', 'Texture Finish'],
+    },
+    {
+      id: 'interior-designing',
+      num: '02',
+      title: 'INTERIOR DESIGNING',
+      img: 'images/interior-design-service.webp',
+      desc: 'Full procurement management from global premium suppliers, balancing budget realities with exceptional structural quality.',
+      tags: ['Space Planning', 'Furniture Curation', 'Lighting Design', 'Material Sourcing'],
+    },
+    {
+      id: 'housekeeping-services',
+      num: '03',
+      title: 'HOUSEKEEPING SERVICES',
+      img: 'images/house-cleaning-service.webp',
+      desc: 'Comprehensive cleaning and maintenance solutions to keep your space pristine and welcoming.',
+      tags: ['Deep Cleaning', 'Daily Upkeep', 'Laundry', 'Sanitisation'],
+    },
+    {
+      id: 'old-age-housing',
+      num: '04',
+      title: 'OLD AGE HOUSING',
+      img: 'images/oldage-housing-service.webp',
+      desc: 'Rigorous architectural supervision from initial groundwork site-mapping to final client walkthrough handshakes.',
+      tags: ['Assisted Living', 'Safety Modifications', 'Community Spaces', 'Care Support'],
+    },
+    {
+      id: 'security-services',
+      num: '05',
+      title: 'SECURITY SERVICES',
+      img: 'images/security-service.png',
+      desc: 'We create a complete security concept, carefully balancing vigilance and discretion to reflect your safety needs in every detail.',
+      tags: ['CCTV Setup', 'Guard Services', 'Access Control', 'Emergency Response'],
+    },
+    {
+      id: 'paying-guest-accommodation',
+      num: '06',
+      title: 'PAYING GUEST ACCOMMODATION',
+      img: 'images/pg-acc-service.jfif',
+      desc: 'Complete structural renovations and heritage restoration works managed by premier certified craft engineers.',
+      tags: ['Furnished Rooms', 'Meals Included', 'Wi-Fi & Utilities', 'Monthly Plans'],
+    },
+  ];
+
   return (
-    // 🔥 UPDATED: Main background to Rice Paper
-    <div ref={containerRef} className="bg-[#FDFCF8] transition-colors duration-700 overflow-x-hidden font-sans selection:bg-[#C18C5D]/30 selection:text-[#2C2C24]">
-
-      {!loaderComplete && (
-        <div
-          ref={loaderRef}
-          className="fixed inset-0 z-[300] bg-[#FDFCF8] flex items-end justify-end p-12 md:p-20"
-        >
-          <div
-            ref={counterRef}
-            className="font-serif text-[20vw] md:text-[15vw] font-bold text-[#5D7052]"
-          >
-            0
-          </div>
-        </div>
-      )}
-
-
-      <main
-        ref={mainContentRef}
-        className="relative"
+    <div className="bg-gradient-to-b from-[#FBF5DD] via-[#ede6cb] to-[#dfd7b9] text-[#16251b] font-editorial-sub antialiased min-h-screen selection:bg-[#2b5c32] selection:text-white relative overflow-x-hidden">
+      {/* ==================== MENU SYSTEM ==================== */}
+      <div
+        className={`fixed inset-0 z-50 bg-[#FBF5DD] flex flex-col justify-between border-x border-[#2b5c32]/10 transition-all duration-500 ease-in-out ${isMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+          }`}
+        style={{ willChange: 'transform, opacity' }}
       >
-        <div className="fixed inset-0 z-0 ">
-          <Canvas
-            camera={{ position: [0, 0, 1] }}
-            gl={{ antialias: false, powerPreference: "high-performance" }}
-            dpr={[1, 2]}
+        <nav className="w-full border-b border-[#ffffff]/80 px-12 py-7 flex justify-between items-center text-[10px] tracking-[0.3em] text-[#2b5c32]/70 uppercase font-medium">
+          <button
+            onClick={() => setIsMenuOpen(false)}
+            className="cursor-pointer hover:text-black transition-colors text-[#2b5c32]"
+            aria-label="Close menu"
           >
-            <LiquidBackground />
-          </Canvas>
-          {/* 🔥 UPDATED: Grid and Radial overlay colors for Organic feel */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(93,112,82,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(93,112,82,0.05)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#FDFCF8_95%)]" />
+            CLOSE
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 bg-[#2b5c32] rounded-tr-full"></div>
+            <span className="font-editorial-heading tracking-[0.1em] text-sm text-[#16251b] font-bold">
+              SparkingStarz
+            </span>
+          </div>
+          <div className="opacity-0 pointer-events-none">CONTACT</div>
+        </nav>
+
+        <div className="flex flex-col items-center justify-center space-y-8 flex-grow">
+          <button
+            onClick={() => handleNavClick('home')}
+            className={`menu-item font-editorial-heading text-4xl md:text-6xl transition-all duration-300 uppercase tracking-widest ${activeSection === 'home' ? 'text-[#2b5c32]' : 'text-zinc-500 hover:text-[#2b5c32]'
+              }`}
+          >
+            Home
+          </button>
+          <button
+            onClick={() => handleNavClick('about')}
+            className={`menu-item font-editorial-heading text-4xl md:text-6xl transition-all duration-300 uppercase tracking-widest ${activeSection === 'about' ? 'text-[#2b5c32]' : 'text-zinc-500 hover:text-[#2b5c32]'
+              }`}
+          >
+            About
+          </button>
+          <button
+            onClick={() => handleNavClick('services')}
+            className={`menu-item font-editorial-heading text-4xl md:text-6xl transition-all duration-300 uppercase tracking-widest ${activeSection === 'services' ? 'text-[#2b5c32]' : 'text-zinc-500 hover:text-[#2b5c32]'
+              }`}
+          >
+            Services
+          </button>
+          <button
+            onClick={() => handleNavClick('projects')}
+            className={`menu-item font-editorial-heading text-4xl md:text-6xl transition-all duration-300 uppercase tracking-widest ${activeSection === 'projects' ? 'text-[#2b5c32]' : 'text-zinc-500 hover:text-[#2b5c32]'
+              }`}
+          >
+            Our Projects
+          </button>
+          <button
+            onClick={() => handleNavClick('contact')}
+            className={`menu-item font-editorial-heading text-4xl md:text-6xl transition-all duration-300 uppercase tracking-widest ${activeSection === 'contact' ? 'text-[#2b5c32]' : 'text-zinc-500 hover:text-[#2b5c32]'
+              }`}
+          >
+            Contact
+          </button>
         </div>
 
-        <div className="fixed inset-0 pointer-events-none opacity-[0.06] z-[100] mix-blend-multiply bg-[url('data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'5\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E')]" />
+        <div className="w-full flex justify-center gap-2.5 py-8 bg-[#ede6cb] text-center border-t border-[#2b5c32]/10">
+          <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
+          <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
+          <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
+        </div>
+      </div>
 
-        <div
-          ref={cursorRef}
-          className="fixed top-0 left-0 pointer-events-none z-[9999] hidden md:block"
-          style={{
-            width: isHovering ? "50px" : "20px",
-            height: isHovering ? "50px" : "20px",
-            backgroundColor: isHovering ? "transparent" : "#2C2C24",
-            border: isHovering ? "2px solid #5D7052" : "none",
-            borderRadius: "50%",
-            transform: "translate3d(0,0,0) translate(-50%, -50%)",
-            transition: "all 0.25s ease",
-            mixBlendMode: "multiply",
-          }}
-        />
-        <Navbar />
-        <div className="relative z-10 text-[#2C2C24]">
-          {/* SECTION 1: HERO - 🔥 UPDATED Text Colors */}
-          <section className="story-section min-h-screen flex flex-col justify-center px-6 md:px-12 pt-20">
-            <div className="max-w-7xl ">
-              <h1 ref={heroTitleRef} className="font-serif text-[10vw] md:text-[11vw] font-bold leading-[0.8] tracking-tighter text-[#5D7052] uppercase">
-                <div className="line-1 hero-line block overflow-hidden py-2 ">Excellence</div>
-                <div className="line-2 hero-line block overflow-hidden py-2 italic text-[#5D7052] ">in <span className="text-[#C18C5D]">Every</span></div>
-                <div className="line-3 hero-line block overflow-hidden py-2 min-h-[1em] hover-target"></div>
-              </h1>
-              <div className="mt-12 pb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
-                <p className="font-serif italic text-md md:text-2xl text-[#2C2C24]/60 max-w-xl">
-                  Elite facility management and living solutions for high-profile residential and commercial entities. We handle the details so you can focus on what matters.
-                </p>
-                <div className="flex items-center gap-6">
-                  <div className="w-12 h-12 border border-[#5D7052]/30 rounded-full flex items-center justify-center animate-spin-slow">
-                    <svg className="w-6 h-6 text-[#5D7052]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <p className="text-[10px] uppercase font-bold tracking-widest leading-tight">Protocol Active <br /> Est. 2020</p>
-                </div>
+      {/* MASTER CONTAINER FRAME */}
+      <div className="w-full mx-auto border-x border-[#2b5c32]/10 flex flex-col bg-gradient-to-b from-[#FBF5DD] via-[#ede6cb] to-[#dfd7b9]">
+        {/* NAVIGATION HEADER */}
+
+        <div className='w-full bg-cover bg-center bg-no-repeat ' style={{
+          backgroundImage: "url('images/her-section.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}>
+          <nav className="w-full border-b border-[#ffffff]/10 px-12 py-7 flex justify-between items-center text-[10px] tracking-[0.3em] text-[#2b5c32]/80 uppercase font-medium relative z-30 text-[#ffffff]/80">
+            <div className="flex items-center gap-2 cursor-pointer">
+              <span className="font-editorial-heading tracking-[0.1em] text-lg text-[#16251b] font-bold">
+                Sparking Stars
+              </span>
+            </div>
+
+            {/* MOBILE ONLY: Menu Button */}
+            <button
+              onClick={toggleMenu}
+              className="md:hidden cursor-pointer hover:text-black transition-colors"
+            >
+              MENU
+            </button>
+
+            {/* LAPTOP ONLY: Navigation Links */}
+            <div className="hidden md:flex gap-8">
+              <div className="flex gap-6">
+                <button onClick={() => handleNavClick('about')} className="hover:text-black hover:cursor-pointer">About us</button>
+                <button onClick={() => handleNavClick('services')} className="hover:text-black hover:cursor-pointer">Services</button>
+                <button onClick={() => handleNavClick('contact')} className="hover:text-black hover:cursor-pointer">Contacts</button>
+                <button onClick={() => handleNavClick('projects')} className="hover:text-black hover:cursor-pointer">Project</button>
               </div>
             </div>
-          </section>
 
-          <InfiniteSlider />
+            {/* Visible on both (or wrap in hidden md:block if you want it desktop only) */}
+            <button className="hidden md:block cursor-pointer hover:text-black transition-colors">
+              (+91) 8369928617
+            </button>
+          </nav>
 
-          {/* SECTION 2: PRINCIPLES - 🔥 UPDATED Theme Colors */}
-          <section id="about" className="story-section min-h-screen bg-gradient-to-b from-[#FDFCF8] via-[#F3F4F1] to-[#FDFCF8] text-[#5D7052] border-t border-b border-[#DED8CF] py-20 px-6 md:px-12 flex items-center">
-            <div className="max-w-6xl mx-auto w-full ">
-              <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-8 ">
-                <div className="reveal">
-                  <p className="text-[10px] uppercase tracking-[0.4em] font-bold mb-6 opacity-60 flex items-center gap-4">
-                    <span className="w-8 h-px bg-[#5D7052]/40"></span> The Standard
-                  </p>
-                  <h2 className="font-serif text-6xl md:text-6xl lg:text-8xl font-medium leading-none text-[#2C2C24]">
-                    Built on <em className="italic opacity-70 font-serif">care.</em>
-                  </h2>
-                </div>
-                <div className="reveal md:max-w-xs pt-8">
-                  <p className="text-sm md:text-lg leading-relaxed opacity-60 text-right md:text-left">
-                    We operate with meticulous attention to detail, delivering premium maintenance and living environments with absolute reliability and unyielding quality.
-                  </p>
-                </div>
-              </div>
-              <div className="grid md:grid-cols-3 gap-2 ">
-                {PRINCIPLES.map((p) => (
-                  <div
-                    key={p.num}
-                    className="principle-card hover-target reveal p-8 md:p-12 bg-white/50 border border-[#DED8CF] rounded-sm hover:bg-[#5D7052]/5 transition-all duration-500 group relative overflow-hidden cursor-pointer hover:scale-[1.02]"
-                  >
-                    <div className="absolute -bottom-4 -right-4 text-9xl font-serif opacity-[0.03] select-none pointer-events-none group-hover:opacity-[0.05] transition-opacity">{p.num}</div>
-                    <div className="flex items-center gap-4 mb-12">
-                      <span className="font-serif text-sm opacity-50 text-[#C18C5D]">[{p.num}]</span>
-                      <div className="h-px w-12 bg-[#5D7052]/20 group-hover:w-20 transition-all duration-700"></div>
-                    </div>
-                    <h3 className="font-serif text-3xl md:text-4xl mb-6">{p.title}</h3>
-                    <p className="text-sm md:text-base leading-relaxed opacity-60 group-hover:opacity-90 transition-opacity">{p.body}</p>
-                  </div>
-                ))}
+          <div ref={heroRef} className="w-full px-12 pt-16 pb-12 relative z-10">
+            <h1 className="hero-title font-editorial-heading text-[8vw] font-medium leading-[0.9] tracking-tight text-[#ffffff] uppercase">
+              FACILITY &<br />
+              LIFESTYLE SERVICES
+            </h1>
+
+            <div className="flex flex-col md:flex-row justify-between items-end mt-8 gap-8 border-b border-[#ffffff]/60 pb-9">
+              <p className="max-w-md text-[#ffffff]/80 text-sm leading-relaxed">
+                we create bespoke interiors that perfectly suit your lifestyle and needs. like experienced tailors.
+              </p>
+              <div className="hero-buttons flex gap-4">
+                <button className="border border-[#ffffff]/40 text-[#ffffff] px-8 py-3 rounded-full text-[10px] uppercase font-bold hover:bg-[#2b5c32] hover:text-white transition-all">
+                  Get in touch
+                </button>
+                <button className="bg-[#a67c52] text-white px-8 py-3 rounded-full text-[10px] uppercase font-bold hover:bg-[#8b6540] transition-all">
+                  Services
+                </button>
               </div>
             </div>
-          </section>
 
-          {/* SECTION 3: STATS - 🔥 UPDATED Theme Colors */}
-          <section className="story-section py-22 px-6 md:px-12 bg-[#FDFCF8]">
-            <div className="lg:mx-50 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-4 border border-[#DED8CF] items-start">
-              <div className="reveal space-y-16 p-4">
-                <div className="relative text-[#2C2C24]/80 leading-relaxed text-lg font-serif italic max-w-xl">
-                  <span className="float-left text-7xl font-serif font-bold text-[#5D7052] leading-[0.8] mr-4 mt-4">S</span>
-                  ince 2020 our inception, Sparking Stars has empowered residents, homeowners, and businesses in Mumbai to elevate their living and working environments through premium facility solutions.
-                  <br /><br />
-                  With a focus on Kandivali and the surrounding regions, we have become a trusted partner for those seeking excellence in property care.
-                </div>
-                <div className="grid grid-cols-2 border border-[#DED8CF] rounded-sm overflow-hidden">
-                  {STATS.map((s, i) => (
+            {/* Full-Width Slider Section */}
+            <div className="w-full relative py-12 ">
+              {/* The Blurry Background Layer */}
+              <div className="absolute inset-0 bg-white/2 backdrop-blur-lg z-0 "></div>
+              {/* Services Slider - FIXED ANIMATION */}
+              <div ref={heroSliderRef} className="w-full  overflow-hidden mt-12 py-2">
+                <div className="slider-wrapper flex gap-6 w-max">
+                  {/* Duplicate items for seamless loop */}
+                  {[...servicesList, ...servicesList].map((service, idx) => (
                     <div
-                      key={s.label}
-                      className={`p-10 border-[#DED8CF] ${i === 0 ? "border-r border-b" : ""} ${i === 1 ? "border-b" : ""} ${i === 2 ? "border-r" : ""} hover:bg-[#5D7052]/5 transition-all duration-300 cursor-pointer hover:scale-[1.03]`}
+                      key={idx}
+                      className="w-[350px] h-[300px] bg-[#d1c9a9] rounded-2xl p-4 flex flex-col justify-start border border-[#2b5c32]/10 shrink-0"
+                      style={{
+                        backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('${service.img}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                      }}
+
                     >
-                      <div className="font-serif text-4xl text-[#5D7052] font-bold mb-2">{s.value}</div>
-                      <div className="text-[9px] uppercase tracking-widest text-[#2C2C24]/40 font-bold">{s.label}</div>
+                      <h3 className="text-[#ffffff] font-medium text-2xl mb-4">{service.title}</h3>
+                      <div className="mb-4 border border-[#2b5c32]/20 bg-white rounded-full px-4 py-1 text-[10px] uppercase text-[#2b5c32] inline-block w-fit">
+                        {service.title.split(' ')[0]}
+                      </div>
+                      <Link
+                        href={`/services/${service.id}`}
+                        className="text-[#ffffff]/80 text-sm flex items-center gap-1 cursor-pointer hover:underline"
+                      >
+                        ↗ More Details
+                      </Link>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="reveal relative p-4 border-l border-[#DED8CF]">
-                <p className="text-[10px] uppercase tracking-[0.4em] font-bold mb-8 text-[#5D7052]/60 flex items-center gap-4">
-                  <span className="w-8 h-px bg-[#5D7052]/40"></span> Since 2019 · Dominate
-                </p>
-                <h2 className="font-serif text-6xl md:text-8xl font-medium leading-[1.1] text-[#2C2C24]">
-                  We <br /> <em className="italic opacity-80 font-serif">Dominate</em> <br /> the Digital Arena.
-                </h2>
+            </div>
+
+            {/* Footer details */}
+            <div className="mt-8 flex justify-between items-center text-sm uppercase tracking-widest text-[#ffffff]">
+              <span>[ OUR OBJECTIVE ]</span>
+              <div className="flex flex-col items-end gap-1">
+                <span>[01/06] mark</span>
+                <span>DELIVERING TRUST, QUALITY & RELIABILITY</span>
               </div>
             </div>
-          </section>
+          </div>
 
-          {/* SECTION 4: SERVICES - 🔥 UPDATED Theme Colors */}
-          <section
-            id="services"
-            className="story-section bg-[#0B2A1E] text-[#E7E5DF] py-28 px-6 md:px-12"
+        </div>
+
+
+        <div className='w-full max-w-[1440px] mx-auto border-x border-[#2b5c32]/10 flex flex-col bg-[#ede6cb]'>
+          {/* ABOUT BRAND INTRODUCTION SECTION */}
+          <div
+            ref={aboutRef}
+            className="grid grid-cols-1 lg:grid-cols-12 w-full border-b border-[#2b5c32]/10 bg-[#FBF5DD] relative z-10 overflow-hidden"
           >
-            <div className="max-w-7xl mx-auto">
+            <div className="about-left lg:col-span-4 p-8 md:p-12 lg:p-14 space-y-6 border-b lg:border-b-0 lg:border-r border-[#2b5c32]/10 z-10 bg-[#ede6cb]/10 backdrop-blur-sm">
+              <h2 className="font-editorial-heading text-3xl md:text-4xl font-normal tracking-wide text-[#16251b] uppercase">
+                Facility & LIfestyle Services
+              </h2>
+              <p className="text-[#2b5c32]/80 text-xs tracking-[0.08em] uppercase leading-relaxed">
+                Sparking Stars is all-in-one service company with 5+ years of experience, offering
+                security, housekeeping, building painting, interior design, PG accommodation, and old
+                age housing solutions. Backed by a team , we are committed to delivering reliable,
+                high-quality services with a focus on customer satisfaction.
+              </p>
+              <div className="flex flex-wrap gap-4 pt-2">
+                <button className="bg-[#2b5c32] text-white text-[10px] font-bold tracking-[0.25em] uppercase px-8 py-3 rounded-full hover:bg-[#123617] transition-all duration-300 transform hover:scale-105">
+                  CONSULT ONLINE NOW
+                </button>
+              </div>
+            </div>
 
-              {/* MAIN HEADING */}
-              <h2 className="font-serif text-5xl md:text-7xl lg:text-8xl font-medium leading-[0.95] mb-20 text-[#E7E5DF]">
-                Facility <br />
-                <em className="italic opacity-60">Management.</em>
+            <div className="about-right lg:col-span-8 grid grid-cols-1 md:grid-cols-12 flex-grow relative">
+              <div className="hidden md:flex md:col-span-2 items-center justify-center border-r border-[#2b5c32]/10 py-6">
+                <div className="font-editorial-heading text-[#2b5c32]/60 uppercase tracking-[0.45em] text-[10px] font-bold [writing-mode:vertical-lr] rotate-180 select-none">
+                  ABOUT Sparking Stars
+                </div>
+              </div>
+
+              <div className="md:col-span-10 p-8 md:p-12 flex flex-col justify-between space-y-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-[#2b5c32]/80 text-[10px] tracking-widest uppercase leading-[1.8]">
+                  <p className="about-text">
+                    CONSTRUCTED IN 2020 IN INDIA, Sparking Stars IS AN ALL-IN-ONE SERVICE COMPANY COMBINE
+                    FUNCTIONALITY AND CREATIVITY WITH AN AUTHENTIC PRODUCTION TO SHAPE HIGH-END SERVICES.
+                  </p>
+                  <p className="about-text">
+                    Sparking Stars is a comprehensive service provider offering a wide range of
+                    facility management and lifestyle solutions. We deliver seamless services across
+                    residential, commercial, and institutional sectors.
+                  </p>
+                </div>
+
+                {/* Hero Image container */}
+                <div className="w-full mt-12 px-12">
+                  <div className="w-full aspect-[21/9] bg-[#dfd7b9] rounded-[80px] overflow-hidden relative shadow-sm">
+                    <img
+                      src="images/about-image.png"
+                      alt="Interior Design"
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                    />
+                    {/* Decorative overlay from your reference */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <div className="w-full flex justify-end gap-2 px-12 py-3 bg-[#ede6cb] border-b border-[#2b5c32]/10 relative z-10">
+
+          </div>
+
+          {/* SERVICES SECTION */}
+          <div
+            ref={servicesRef}
+            className="w-full bg-[] border-b border-[#2b5c32]/10 p-8 md:p-12 lg:p-16 flex flex-col relative z-10"
+          >
+            {/* Section Header */}
+            <div className="w-full mb-10 flex items-center justify-between gap-8">
+              {/* Left: SERVIC&S Header */}
+              <h2 className="services-title text-[4rem] font-medium tracking-tighter text-[#c5a880] uppercase flex items-center shrink-0">
+                <span>SERVIC</span>
+                <span className="font-serif italic text-[#c5a880] mx-2 text-[5rem]">
+                  ℰ
+                </span>
+                <span>S</span>
               </h2>
 
-              {/* TOP GRID */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 border border-[#E7E5DF]/20 overflow-hidden">
+              {/* Right: "Find the service you need" */}
+              <div className="flex flex-col items-end gap-2 text-right">
+                <h3 className="text-4xl font-medium leading-[1] tracking-tight text-[#1a1a1a] uppercase">
+                  ↳ Find the service <br /> you need
+                </h3>
 
-                {/* LEFT BIG CARD */}
-                <div className="lg:col-span-5 p-10 bg-[#0F3326] border-r border-[#E7E5DF]/20 relative">
-                  <div className="absolute top-0 left-0 w-1 h-20 bg-[#C18C5D]" />
-
-                  <p className="text-[10px] uppercase tracking-[0.4em] text-[#E7E5DF]/40 mb-8">
-                    {SERVICES[0].area}
-                  </p>
-
-                  <h3 className="font-serif text-4xl md:text-5xl leading-tight mb-8">
-                    Digital Risk <br /> & Reputation <br /> Solutions
-                  </h3>
-
-                  <p className="text-sm md:text-base text-[#E7E5DF]/70 leading-relaxed mb-10">
-                    {SERVICES[0].desc}
-                  </p>
-
-                  <ul className="space-y-3">
-                    {SERVICES[0].items.map((item) => (
-                      <li key={item} className="flex gap-3 text-sm text-[#E7E5DF]/80">
-                        <span className="text-[#C18C5D]">→</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-10">
-                    <div className="inline-flex items-center gap-2 bg-[#E7E5DF] text-[#0B2A1E] px-4 py-2 text-[9px] uppercase tracking-widest font-bold">
-                      <span className="w-1.5 h-1.5 bg-[#C18C5D] rounded-full animate-pulse" />
-                      {SERVICES[0].badge}
-                    </div>
-                  </div>
-                </div>
-
-                {/* RIGHT LIST */}
-                <div className="lg:col-span-7 flex flex-col divide-y divide-[#E7E5DF]/20">
-                  {SERVICES.slice(1).map((s) => (
-                    <div
-                      key={s.title}
-                      className="p-8 hover:bg-[#E7E5DF]/5 transition-all duration-300 group"
-                    >
-                      <p className="text-[9px] uppercase tracking-[0.4em] text-[#E7E5DF]/40 mb-3">
-                        {s.area}
-                      </p>
-
-                      <h4 className="font-serif text-2xl md:text-3xl mb-3 group-hover:translate-x-2 transition-transform">
-                        {s.title}
-                      </h4>
-
-                      <p className="text-sm text-[#E7E5DF]/60 max-w-lg">
-                        {s.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
 
-            {/* ===================== */}
-            {/* SOCIAL MEDIA SERVICES */}
-            {/* ===================== */}
-
-            <div className="max-w-7xl mx-auto mt-32">
-
-              {/* Heading */}
-              <div className="flex items-center gap-6 mb-16">
-                <h2 className="font-sans text-4xl md:text-6xl font-semibold">
-                  Social Media Services
-                </h2>
-                <div className="flex-1 h-px bg-[#E7E5DF]/20"></div>
-              </div>
-
-              {/* GRID */}
-              <div className="border border-[#E7E5DF]/20 grid md:grid-cols-2">
-
-                {/* BOX */}
-                {[
-                  {
-                    title: "Desired Usernames and Handle Acquisition",
-                    tag: "Digital Branding",
-                    items: ["Instagram", "X (Twitter)", "Telegram"],
-                  },
-                  {
-                    title: "Platform Intelligence Insights",
-                    tag: "Trace",
-                    items: ["Instagram", "Gmail", "TikTok", "X (Twitter)", "iCloud", "PayPal"],
-                  },
-                  {
-                    title: "Content and Account Removals",
-                    tag: "Digital Threat Elimination",
-                    items: ["Instagram", "WhatsApp", "X (Twitter)", "TikTok", "YouTube", "Reddit"],
-                  },
-                  {
-                    title: "Social Assets & Growth / Boost",
-                    tag: "Recovery & Scale",
-                    items: ["Instagram", "WhatsApp", "Telegram", "Verification", "Shadow Ban Removal"],
-                  },
-                ].map((box, i) => (
-                  <div
-                    key={i}
-                    className={`p-10 border-[#E7E5DF]/20 ${i === 0 ? "border-b md:border-r" :
-                        i === 1 ? "border-b" :
-                          i === 2 ? "md:border-r" : ""
-                      }`}
-                  >
-                    <p className="text-[10px] tracking-[0.4em] uppercase text-[#E7E5DF]/40 mb-6">
-                      {box.tag}
-                    </p>
-
-                    <h3 className="text-2xl md:text-3xl font-semibold mb-4">
-                      {box.title}
-                      <span className="text-sm text-[#E7E5DF]/40 ml-2">
-                        (on all major platforms)
-                      </span>
+            {/* Services Stacking List */}
+            <div className="w-full flex flex-col gap-1">
+              {servicesList.map((service, index) => (
+                <Link
+                  key={service.id}
+                  href={`/services/${service.id}`}
+                  style={{
+                    zIndex: index + 1,
+                  }}
+                  className="group bg-[#1F150C] rounded-lg relative w-full sticky top-0 border-t border-black/[0.07] overflow-hidden transition-colors duration-300"
+                >
+                  {/* Main row — always visible */}
+                  <div className="flex items-center justify-between px-8 md:px-12 py-6 md:py-6">
+                    <h3 className="font-editorial-heading text-4xl md:text-6xl lg:text-[4vw] text-[#E7E1B1]
+                          uppercase tracking-tight leading-none
+                         transition-colors duration-300 group-hover:text-[#FBF5DD]/80">
+                      {service.title}
                     </h3>
 
-                    <div className="flex flex-wrap gap-3 mt-6">
-                      {box.items.map((item) => (
-                        <span
-                          key={item}
-                          className="px-4 py-2 border border-[#E7E5DF]/20 text-sm text-[#E7E5DF]/70"
-                        >
-                          {item}
-                        </span>
-                      ))}
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      <span className="text-[10px] font-mono text-[#E7E1B1]">{service.num}.</span>
+                      {/* Arrow — rotates in on hover */}
+                      <div className="w-9 h-9 rounded-full text-[#FBF5DD] border border-[#FBF5DD]/20 flex items-center
+                            justify-center opacity-0 -rotate-45
+                            transition-all duration-300
+                            group-hover:opacity-100 group-hover:rotate-0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2">
+                          <path d="M7 17L17 7M17 7H7M17 7V17" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </section>
 
-          {/* SECTION 5: VOUCHES - 🔥 UPDATED Theme Colors */}
-          <section id="vouches" className="story-section py-24 px-6 md:px-12 bg-[#FDFCF8]">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16">
-              <div className="lg:col-span-5 h-fit lg:sticky lg:top-32">
-                <div className="reveal">
-                  <p className="text-[10px] uppercase tracking-[0.4em] font-bold mb-6 text-[#5D7052]/60 flex items-center gap-4">
-                    <span className="w-8 h-px bg-[#5D7052]/40"></span> Testimonials
-                  </p>
-                  <h2 className="font-serif text-7xl md:text-[8rem] font-medium leading-none text-[#5D7052] mb-8">
-                    Vouches.
-                  </h2>
-                  <p className="text-[11px] md:text-[13px] uppercase tracking-[0.2em] leading-relaxed text-[#2C2C24]/50 max-w-sm font-bold">
-                    Authentic feedback from our distinguished residents and corporate partners across Mumbai.
-                  </p>
-                </div>
-              </div>
+                  {/* Drawer — slides open on hover */}
+                  <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr]
+                        transition-all duration-[450ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
+                    <div className="overflow-hidden">
+                      <div className="px-8 md:px-12 pb-8 flex flex-col md:flex-row gap-6 md:gap-10 items-start">
 
-              <div className="lg:col-span-7 overflow-hidden h-[500px] relative">
-                <div className="testimonial-vertical-track space-y-6">
-                  {[...TESTIMONIALS, ...TESTIMONIALS].map((t, i) => (
-                    <div
-                      key={i}
-                      className="reveal-card group bg-white border border-[#DED8CF] rounded-2xl p-8 md:p-10 
-hover:bg-[#F3F4F1] transition-colors duration-300 
-relative overflow-hidden cursor-pointer"
-                    >
-                      <div className="flex flex-col md:flex-row gap-8 items-start">
-                        <div className="w-24 h-24 md:w-32 md:h-40 bg-[#5D7052]/5 rounded-xl flex-shrink-0 border border-[#DED8CF] overflow-hidden grayscale contrast-125 opacity-70 group-hover:opacity-100 transition-opacity">
-                          <div className="w-full h-full bg-gradient-to-b from-[#DED8CF] to-[#F3F4F1] flex items-center justify-center text-[10px] text-[#5D7052]/20 italic">
-                            Asset_P{i}
-                          </div>
+                        {/* Thumbnail */}
+                        <div className="w-full md:w-40 h-24 md:h-28 rounded-lg overflow-hidden shrink-0 bg-black/10">
+                          <img
+                            src={service.img}
+                            alt={service.title}
+                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100
+                             scale-105 group-hover:scale-100 transition-all duration-500"
+                          />
                         </div>
 
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-6">
-                            <div>
-                              <h4 className="font-serif text-2xl text-[#2C2C24] mb-1">{t.id}</h4>
-                              <p className="text-[9px] uppercase tracking-widest text-[#5D7052]/40 font-bold">{t.tag}</p>
-                            </div>
-                            <div className="flex items-center gap-2 px-3 py-1 border border-[#5D7052]/20 bg-[#5D7052]/5 rounded-full">
-                              <span className="w-1 h-1 bg-[#5D7052] rounded-full animate-pulse"></span>
-                              <span className="text-[8px] uppercase font-bold text-[#5D7052] tracking-tighter">Verified</span>
-                            </div>
-                          </div>
-
-                          <p className="font-serif italic text-lg md:text-xl text-[#2C2C24]/80 leading-relaxed mb-8">
-                            &ldquo;{t.text}&rdquo;
+                        {/* Text content */}
+                        <div className="flex flex-col">
+                          <p className="text-sm text-[#FBF5DD]/55 leading-relaxed max-w-sm">
+                            {service.desc}
                           </p>
-
-                          <div className="flex justify-between items-center border-t border-[#DED8CF] pt-6">
-                            <span className="text-[9px] uppercase tracking-[0.3em] text-[#5D7052]/20 font-bold">Recent</span>
-                            <div className="w-5 h-5 opacity-20 contrast-0 grayscale">
-                              <div className="border border-[#5D7052] rounded-full w-full h-full text-[8px] flex items-center justify-center text-[#5D7052]">D</div>
-                            </div>
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {service.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[10px] font-mono text-[#FBF5DD]/45 border border-[#FBF5DD]/20
+                                 px-3 py-1 rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
                           </div>
+                          <p className="text-[11px] font-semibold uppercase tracking-widest
+                              text-[#FBF5DD]/60 mt-4 flex items-center gap-2">
+                            Explore service
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" strokeWidth="2.5">
+                              <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                          </p>
                         </div>
                       </div>
                     </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* HORIZONTAL SCROLL SECTION */}
+          <div
+            ref={scrollPinSectionRef}
+            className="w-full h-screen relative bg-[#ede6cb] overflow-hidden z-20"
+          >
+            <div
+              ref={horizontalPanelsWrapperRef}
+              className="flex h-full"
+              style={{ willChange: 'transform' }}
+            >
+              {/* PANEL 1: MEET OUR VISION */}
+              <div className="horizontal-panel w-screen h-full flex-shrink-0 border-r border-[#2b5c32]/10 bg-[#ede6cb] p-8 md:p-12 lg:p-16 flex flex-col justify-center space-y-8 overflow-hidden">
+
+                {/* Header row */}
+                <div className="panel-content flex flex-col md:flex-row md:items-start justify-between w-full gap-4 max-w-[1300px] mx-auto">
+                  <div className="space-y-3">
+                    {/* Eyebrow */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-px bg-[#2b5c32]/40" />
+                      <span className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">Est. 2020</span>
+                    </div>
+                    <h2 className="panel-item font-editorial-heading text-5xl md:text-6xl font-normal tracking-widest text-[#16251b] uppercase leading-[1.0]">
+                      MEET OUR<br />VISION
+                    </h2>
+                  </div>
+
+                  <div className="flex flex-col gap-4 pt-2 max-w-md">
+                    <p className="panel-item text-[#2b5c32]/70 text-[10px] tracking-[0.16em] uppercase leading-[2]">
+                      To become a trusted one-stop solution for integrated services across industries. Deliver high-quality, reliable, and customer-centric services through innovation, skilled manpower, and operational excellence.
+                    </p>
+                    {/* Inline stat pills */}
+                    <div className="flex gap-3 flex-wrap">
+                      {[['5+', 'Years of experience'], ['6', 'Core Services'], ['Pan-India', 'Coverage']].map(([val, label]) => (
+                        <div key={label} className="border border-[#2b5c32]/20 rounded-full px-4 py-1.5 flex items-center gap-2">
+                          <span className="font-editorial-heading text-[#16251b] text-sm">{val}</span>
+                          <span className="text-[8px] font-mono tracking-[0.2em] uppercase text-[#2b5c32]/50">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="panel-item w-full max-w-[1300px] mx-auto aspect-[2.1/1] border border-[#2b5c32]/15 rounded-xl relative flex items-center justify-center group overflow-hidden bg-[#d4cca8]">
+
+                  {/* Video element */}
+                  <video
+                    className="absolute inset-0 w-full h-full object-cover z-0"
+                    controls={false}
+                    autoPlay={false}
+                    loop
+                    muted
+                    poster="your-poster-image-url" // Optional: Add a poster image
+                  >
+                    <source src="/images/our-mission-video.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+
+                  {/* Animated ambient background */}
+                  <div
+                    className="absolute inset-0 opacity-30 z-10"
+                    style={{
+                      background: 'radial-gradient(ellipse 60% 50% at 20% 60%, #2b5c32 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 75% 30%, #16251b 0%, transparent 65%)',
+                      animation: 'visionPulse 6s ease-in-out infinite alternate',
+                    }}
+                  />
+
+                  {/* Grain texture overlay */}
+                  <div
+                    className="absolute inset-0 opacity-[0.03] pointer-events-none z-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                      backgroundSize: '180px',
+                    }}
+                  />
+
+                  {/* Animated scanning line */}
+                  <div
+                    className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-20"
+                  >
+                    <div
+                      className="absolute left-0 right-0 h-px bg-[#2b5c32]/20"
+                      style={{ animation: 'scanLine 3s linear infinite' }}
+                    />
+                  </div>
+
+                  {/* Corner marks */}
+                  {[
+                    'top-4 left-4 border-t border-l',
+                    'top-4 right-4 border-t border-r',
+                    'bottom-4 left-4 border-b border-l',
+                    'bottom-4 right-4 border-b border-r',
+                  ].map((cls, i) => (
+                    <div
+                      key={i}
+                      className={`absolute w-5 h-5 border-[#2b5c32]/30 ${cls} opacity-0 group-hover:opacity-100 transition-all duration-500 z-20`}
+                      style={{ transitionDelay: `${i * 60}ms` }}
+                    />
                   ))}
+
+                  {/* Grid lines */}
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.04] z-10"
+                    style={{
+                      backgroundImage: 'linear-gradient(#2b5c32 1px, transparent 1px), linear-gradient(90deg, #2b5c32 1px, transparent 1px)',
+                      backgroundSize: '60px 60px',
+                    }}
+                  />
+
+                  {/* Brand mark */}
+                  <div className="absolute top-6 right-8 flex items-center gap-2 z-30">
+                    <div className="w-2 h-2 bg-[#2b5c32] rounded-tr-full" />
+                    <span className="font-editorial-heading tracking-[0.2em] text-base text-[#16251b] font-bold">Sparking Star</span>
+                  </div>
+
+                  {/* Bottom-left metadata */}
+                  <div className="absolute bottom-6 left-8 flex items-end gap-6 z-30">
+                    <div>
+                      <p className="text-[8px] font-mono tracking-[0.25em] uppercase text-[#2b5c32]/40 mb-0.5">Format</p>
+                      <p className="text-[10px] font-mono tracking-wider text-[#16251b]/60">4K · 16:9</p>
+                    </div>
+                    <div className="w-px h-6 bg-[#2b5c32]/20" />
+                    <div>
+                      <p className="text-[8px] font-mono tracking-[0.25em] uppercase text-[#2b5c32]/40 mb-0.5">Duration</p>
+                      <p className="text-[10px] font-mono tracking-wider text-[#16251b]/60">03:24</p>
+                    </div>
+                    <div className="w-px h-6 bg-[#2b5c32]/20" />
+                    <div>
+                      <p className="text-[8px] font-mono tracking-[0.25em] uppercase text-[#2b5c32]/40 mb-0.5">Year</p>
+                      <p className="text-[10px] font-mono tracking-wider text-[#16251b]/60">2024</p>
+                    </div>
+                  </div>
+
+                  {/* Bottom-right: Live indicator */}
+                  <div className="absolute bottom-6 right-8 flex items-center gap-2 z-30">
+                    <span
+                      className="block w-1.5 h-1.5 rounded-full bg-[#2b5c32]"
+                      style={{ animation: 'liveDot 1.8s ease-in-out infinite' }}
+                    />
+                    <span className="text-[8px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/60">Brand Film</span>
+                  </div>
+
+                  {/* Play button — pulsing rings */}
+                  <div className="relative z-20 flex items-center justify-center">
+                    {/* Outer pulse rings */}
+                    <div
+                      className="absolute w-32 h-32 rounded-full border border-[#2b5c32]/15"
+                      style={{ animation: 'ringPulse 2.5s ease-out infinite' }}
+                    />
+                    <div
+                      className="absolute w-24 h-24 rounded-full border border-[#2b5c32]/20"
+                      style={{ animation: 'ringPulse 2.5s ease-out infinite 0.6s' }}
+                    />
+
+                    <button
+                      className="relative w-20 h-20 rounded-full border border-[#2b5c32]/25 bg-[#ede6cb]/90 backdrop-blur-md flex items-center justify-center text-[#2b5c32] group-hover:bg-[#2b5c32] group-hover:border-[#2b5c32] group-hover:text-[#ede6cb] transition-all duration-500 shadow-lg"
+                      onClick={() => {
+                        const video = document.querySelector('video') as HTMLVideoElement | null;
+                        if (!video) return;
+                        if (video.paused) {
+                          video.play();
+                        } else {
+                          video.pause();
+                        }
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                        className="w-6 h-6 ml-0.5 transition-transform duration-300 group-hover:scale-110"
+                      >
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Hover: center label */}
+                  <div className="absolute inset-x-0 top-6 flex justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <span className="text-[8px] font-mono tracking-[0.4em] uppercase text-[#2b5c32]/40">
+                      Click to play brand film
+                    </span>
+                  </div>
+                </div>
+
+                {/* Keyframes */}
+                <style>{`
+  @keyframes visionPulse {
+    0%   { opacity: 0.20; transform: scale(1); }
+    100% { opacity: 0.40; transform: scale(1.06); }
+  }
+  @keyframes ringPulse {
+    0%   { transform: scale(0.85); opacity: 0.6; }
+    100% { transform: scale(1.5);  opacity: 0; }
+  }
+  @keyframes liveDot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.2; }
+  }
+  @keyframes scanLine {
+    0%   { top: -2px; }
+    100% { top: 100%; }
+  }
+                `}</style>
+              </div>
+
+              {/* PANEL 2: OUR PROJECT */}
+              <div
+                ref={projectsRef}
+                className="horizontal-panel w-screen h-full flex-shrink-0 grid grid-cols-1 lg:grid-cols-12 bg-[#ede6cb] overflow-hidden"
+              >
+                {/* LEFT: Info column */}
+                <div className="lg:col-span-4 p-8 md:p-12 lg:p-16 flex flex-col justify-between bg-[#1F150C] relative z-10">
+                  <div className="space-y-8">
+                    {/* Decorative dots */}
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="block w-1 h-1 rounded-full bg-[#E7E1B1]/70 opacity-60"
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Heading with line reveal */}
+                    <div className="overflow-hidden">
+                      <h2 className="panel-item font-editorial-heading text-5xl md:text-6xl font-normal tracking-widest text-[#E7E1B1]/70 uppercase leading-[1.05] translate-y-0">
+                        OUR<br />PROJECT
+                      </h2>
+                    </div>
+
+                    {/* Thin rule */}
+                    <div className="w-8 h-px bg-[#E7E1B1]/40" />
+
+                    <p className="panel-item text-[#E7E1B1]/70 text-[10px] tracking-[0.16em] uppercase leading-[2] max-w-[260px]">
+                      Our inspired solutions have helped shape modern acoustic design. Alluring spaces, internationally recognised for their architectural elegance live here.
+                    </p>
+
+                    {/* Counter */}
+                    <div className="flex gap-8 pt-4">
+                      <div>
+                        <p className="font-editorial-heading text-3xl text-[#E7E1B1]/70 tracking-tight">10+</p>
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-[#E7E1B1]/70 mt-1">Projects</p>
+                      </div>
+                      <div className="w-px bg-[#E7E1B1]/70" />
+                      <div>
+                        <p className="font-editorial-heading text-3xl text-[#E7E1B1]/70 tracking-tight">2</p>
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-[#E7E1B1]/70 mt-1">Countries</p>
+                      </div>
+                      <div className="w-px bg-[#E7E1B1]/70" />
+                      <div>
+                        <p className="font-editorial-heading text-3xl text-[#E7E1B1]/70 tracking-tight">5yr+</p>
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-[#E7E1B1]/70 mt-1">Experience</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  <div className="panel-item pt-8">
+                    <button className="group flex items-center gap-3 border border-[#E7E1B1]/70 text-[#E7E1B1]/70 text-[9px] font-bold tracking-[0.3em] uppercase px-7 py-3.5 rounded-full hover:bg-[#E7E1B1]/70 hover:text-[#16251b] hover:border-[#E7E1B1]/70 transition-all duration-500">
+                      SEE ALL PROJECTS
+                      <svg
+                        className="w-3 h-3 -rotate-45 group-hover:rotate-0 transition-transform duration-300"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                      >
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* RIGHT: Project cards grid */}
+                <div className="lg:col-span-8 grid grid-cols-3 divide-x divide-[#2b5c32]/10 border-l border-[#2b5c32]/10 h-full overflow-hidden">
+
+                  {/* Card 1 */}
+                  <div className="group relative h-full overflow-hidden cursor-pointer bg-[#d8d0b2]">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center scale-110 group-hover:scale-100 transition-transform duration-700 ease-out"
+                      style={{ backgroundImage: "url('images/building-painting-service.png')" }}
+                    />
+                    <div className="absolute inset-0 bg-[#16251b]/30 group-hover:bg-[#16251b]/10 transition-colors duration-500" />
+                    {/* Hover reveal label */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400">
+                      <p className="text-[9px] font-mono tracking-[0.25em] text-[#ede6cb]/70 uppercase mb-1">2022</p>
+                      <p className="font-editorial-heading text-[#ede6cb] text-lg uppercase tracking-widest leading-tight">
+                        Building<br />Painting
+                      </p>
+                    </div>
+                    {/* Index */}
+                    <span className="absolute top-5 left-5 text-[9px] font-mono text-[#ede6cb]/50 tracking-widest">01</span>
+                  </div>
+                  {/* Card 2 */}
+                  <div className="group relative h-full overflow-hidden cursor-pointer bg-[#d8d0b2]">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center scale-110 group-hover:scale-100 transition-transform duration-700 ease-out"
+                      style={{ backgroundImage: "url('images/her-section.png')" }}
+                    />
+                    <div className="absolute inset-0 bg-[#16251b]/30 group-hover:bg-[#16251b]/10 transition-colors duration-500" />
+                    {/* Hover reveal label */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400">
+                      <p className="text-[9px] font-mono tracking-[0.25em] text-[#ede6cb]/70 uppercase mb-1">2022</p>
+                      <p className="font-editorial-heading text-[#ede6cb] text-lg uppercase tracking-widest leading-tight">
+                        Interior<br />Designing
+                      </p>
+                    </div>
+                    {/* Index */}
+                    <span className="absolute top-5 left-5 text-[9px] font-mono text-[#ede6cb]/50 tracking-widest">02</span>
+                  </div>
+                  {/* Card 3 */}
+                  <div className="group relative h-full overflow-hidden cursor-pointer bg-[#cfc7a8]">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center scale-110 group-hover:scale-100 transition-transform duration-700 ease-out"
+                      style={{ backgroundImage: "url('images/house-cleaning-service.webp')" }}
+                    />
+                    <div className="absolute inset-0 bg-[#16251b]/40 group-hover:bg-[#16251b]/15 transition-colors duration-500" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-400">
+                      <p className="text-[9px] font-mono tracking-[0.25em] text-[#ede6cb]/70 uppercase mb-1">2023</p>
+                      <p className="font-editorial-heading text-[#ede6cb] text-lg uppercase tracking-widest leading-tight">
+                        House Cleaning<br />Services
+                      </p>
+                    </div>
+                    <span className="absolute top-5 left-5 text-[9px] font-mono text-[#ede6cb]/50 tracking-widest">03</span>
+                  </div>
+                </div>
+
+                {/* Bottom ticker strip — spans full width */}
+                <div className="lg:col-span-12 border-t border-[#E7E1B1]/10 overflow-hidden bg-[#1F150C] py-3">
+                  <div className="flex animate-marquee whitespace-nowrap gap-0">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <span key={i} className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#E7E1B1]/70 px-8">
+                        Architecture ✦ Interior Design ✦ Acoustic Solutions ✦ Spatial Planning ✦ Heritage Restoration
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          {/* SECTION 6: CONTACT - 🔥 UPDATED Theme Colors */}
-          <section id="contact" className="story-section min-h-screen bg-[#FDFCF8] flex items-center justify-center px-6 py-20 relative border-t border-[#DED8CF]">
-            <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-end border border-[#DED8CF] rounded-sm p-8 md:p-12 bg-white/50 ">
-              <div className="text-left">
-                <p className="reveal text-[10px] uppercase tracking-[0.5em] font-bold text-[#5D7052]/40 mb-8 flex items-center gap-4">
-                  <span className="w-8 h-px bg-[#5D7052]/40"></span> [ Initiate Contact ]
-                </p>
-                <h2 className="reveal font-serif text-5xl md:text-7xl lg:text-9xl text-[#5D7052] font-bold leading-[0.9] mb-8">Need <br /> professional <br /> support?</h2>
-                <p className="reveal text-lg md:text-xl text-[#2C2C24]/60 font-serif italic max-w-md">We assess your facility needs, align our team, and move fast</p>
+          {/* OUR BIG CLIENT'S */}
+          <div className="w-full bg-[#ede6cb] border-b border-[#2b5c32]/10 relative z-30">
+            <div className="client-header p-8 md:p-12 border-b border-[#2b5c32]/10 flex flex-col md:flex-row md:items-start justify-between gap-6">
+              <h2 className="font-editorial-heading text-4xl font-normal tracking-widest text-[#16251b] uppercase leading-none">
+                OUR BIG CLIENT'S
+              </h2>
+              <p className="text-[#2b5c32]/70 text-[10px] tracking-widest uppercase max-w-xl leading-relaxed">
+                THERE IS A BALANCE THAT MUST BE ACHIEVED IN CREATING SPACES THAT LOOK GOOD BUT ALSO FEEL GOOD TO
+                BE IN AND BOTH ARE EQUALLY AS IMPORTANT.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y divide-[#2b5c32]/10 bg-zinc-100/10 text-center border-b border-[#2b5c32]/10">
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none">
+                [ AC MARRIOTT ]
               </div>
-              <div className="reveal flex flex-col md:flex-row gap-4 lg:justify-end">
-                <button onClick={() => setShowWaitlist(true)} className="group bg-[#5D7052] text-[#FDFCF8] px-10 py-5 rounded-sm font-bold uppercase tracking-widest text-[11px] hover:shadow-[0_0_30px_rgba(93,112,82,0.3)] transition-all flex items-center justify-center gap-3 hover:scale-[1.02]">
-                  Schedule Call <span className="group-hover:translate-x-1 transition-transform">→</span>
-                </button>
-                <button className="border border-[#DED8CF] text-[#5D7052] px-10 py-5 rounded-sm font-bold uppercase tracking-widest text-[11px] hover:bg-[#5D7052]/5 transition-all hover:scale-[1.02]">View Services</button>
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none">
+                [ WALDORF ASTORIA ]
+              </div>
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none">
+                [ MANDARIN ORIENTAL ]
+              </div>
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none">
+                [ HYATT PLACE ]
+              </div>
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none border-t border-[#2b5c32]/10">
+                [ HARRAH'S ENT. ]
+              </div>
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none border-t border-[#2b5c32]/10">
+                [ WESTIN HOTELS ]
+              </div>
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none border-t border-[#2b5c32]/10">
+                [ HARRAH'S ]
+              </div>
+              <div className="client-item p-8 h-36 flex items-center justify-center text-xs tracking-widest text-[#2b5c32]/70 uppercase font-mono hover:bg-[#ede6cb]/40 transition-colors select-none border-t border-[#2b5c32]/10">
+                [ HILTON ]
               </div>
             </div>
-            <footer className="absolute bottom-10 left-0 w-full px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4 text-[9px] uppercase tracking-[0.4em] text-[#5D7052]/20">
-              <p>&copy; 2026 Sparking Stars Enterprises. &bull; Premium  Consulting</p>
-              <div className="flex gap-8">
-                <a href="#" className="hover:text-[#5D7052]/50 transition-colors pointer-events-auto">Privacy Policy</a>
-                <a href="#" className="hover:text-[#5D7052]/50 transition-colors pointer-events-auto">Terms of Service</a>
-              </div>
-            </footer>
-          </section>
-        </div>
-      </main>
-
-      {/* WAITLIST MODAL - 🔥 UPDATED Colors */}
-      {showWaitlist && (
-        <div className="fixed inset-0 bg-[#2C2C24]/90 backdrop-blur-md z-[200] flex items-center justify-center p-6" onClick={() => setShowWaitlist(false)}>
-          <div className="relative bg-[#FDFCF8] border-4 border-[#DED8CF] rounded-lg p-10 md:p-14 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
-            <button className="absolute top-6 right-6 text-[#5D7052]/40 hover:text-[#5D7052]" onClick={() => setShowWaitlist(false)}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <h3 className="font-serif text-3xl md:text-4xl font-bold text-[#5D7052] mb-2">Join the Waitlist</h3>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#5D7052]/40 mb-10 italic">Secure your spot early.</p>
-            <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); setShowWaitlist(false); }}>
-              <div className="group">
-                <label className="block text-[9px] uppercase font-bold text-[#5D7052]/30 mb-3 tracking-widest">Name / Company</label>
-                <input type="text" placeholder="Acme Corp" className="w-full bg-[#F3F4F1] border-2 border-[#DED8CF] rounded-sm p-4 text-[#2C2C24] focus:border-[#5D7052]/40 outline-none" required />
-              </div>
-              <div className="group">
-                <label className="block text-[9px] uppercase font-bold text-[#5D7052]/30 mb-3 tracking-widest">Gmail / Email</label>
-                <input type="email" placeholder="your@gmail.com" className="w-full bg-[#F3F4F1] border-2 border-[#DED8CF] rounded-sm p-4 text-[#2C2C24] focus:border-[#5D7052]/40 outline-none" required />
-              </div>
-              <button type="submit" className="w-full bg-[#5D7052] text-[#FDFCF8] py-5 rounded-sm font-bold uppercase tracking-[0.2em] text-xs hover:bg-[#C18C5D] transition-all">Join Now</button>
-            </form>
           </div>
+
+          {/* GIANT OVAL CAPSULE CTA */}
+          {/* ─── CTA SECTION ─── */}
+          <div className="cta-section w-full bg-[#ede6cb] p-8 md:p-14 lg:p-16 text-center border-b border-[#2b5c32]/10 flex flex-col items-center relative z-30">
+            <button
+              onClick={() => setFormOpen(true)}
+              className="w-full max-w-4xl bg-[#2b5c32] text-white text-center py-6 md:py-8 lg:py-9 rounded-full font-editorial-heading font-normal text-2xl md:text-4xl lg:text-5xl tracking-widest hover:bg-[#123617] transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-[1.02] shadow-md shadow-emerald-900/10"
+            >
+              START YOUR PROJECT NOW
+            </button>
+          </div>
+
+          {/* ─── MODAL OVERLAY ─── */}
+          {formOpen && (
+            <div
+              ref={overlayRef}
+              onClick={(e) => { if (e.target === overlayRef.current) setFormOpen(false); }}
+              className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+              style={{ backgroundColor: 'rgba(22, 37, 27, 0.65)', backdropFilter: 'blur(8px)' }}
+            >
+              <div
+                className="relative w-full max-w-lg bg-[#ede6cb] rounded-2xl overflow-hidden shadow-2xl"
+                style={{ animation: 'modalIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both' }}
+              >
+                {/* Top accent bar */}
+                <div className="h-1 w-full bg-[#2b5c32]" />
+
+                {/* Header */}
+                <div className="px-8 pt-8 pb-6 flex items-start justify-between border-b border-[#2b5c32]/10">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#2b5c32]" />
+                      <span className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">New Enquiry</span>
+                    </div>
+                    <h3 className="font-editorial-heading text-2xl md:text-3xl text-[#16251b] tracking-widest uppercase leading-tight">
+                      Let's Start<br />Your Project
+                    </h3>
+                    <p className="text-[10px] tracking-[0.15em] uppercase text-[#2b5c32]/50 mt-2 leading-relaxed">
+                      Fill in your details and we'll reach<br />out within 24 hours.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setFormOpen(false)}
+                    className="w-8 h-8 rounded-full border border-[#2b5c32]/20 flex items-center justify-center text-[#2b5c32]/50 hover:bg-[#2b5c32] hover:text-[#ede6cb] hover:border-[#2b5c32] transition-all duration-300 shrink-0 mt-1"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Form body */}
+                <div className="px-8 py-7">
+                  {sent ? (
+                    // ─── Success state ───
+                    <div className="flex flex-col items-center justify-center py-10 gap-4">
+                      <div
+                        className="w-14 h-14 rounded-full bg-[#2b5c32] flex items-center justify-center"
+                        style={{ animation: 'modalIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
+                      >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ede6cb" strokeWidth="2.5">
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="font-editorial-heading text-xl text-[#16251b] tracking-widest uppercase">Message Sent!</p>
+                      <p className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#2b5c32]/50 text-center">
+                        We'll be in touch within 24 hours.
+                      </p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
+                      {/* Name */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">
+                          Full Name <span className="text-[#2b5c32]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formState.name}
+                          onChange={(e) => setFormState(p => ({ ...p, name: e.target.value }))}
+                          placeholder="Rahul Sharma"
+                          className="w-full bg-transparent border border-[#2b5c32]/20 rounded-lg px-4 py-3 text-sm text-[#16251b] placeholder-[#2b5c32]/25 tracking-wide outline-none focus:border-[#2b5c32]/60 focus:bg-[#dfd7b9]/20 transition-all duration-200"
+                        />
+                      </div>
+
+                      {/* Email */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">
+                          Email Address <span className="text-[#2b5c32]">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={formState.email}
+                          onChange={(e) => setFormState(p => ({ ...p, email: e.target.value }))}
+                          placeholder="rahul@example.com"
+                          className="w-full bg-transparent border border-[#2b5c32]/20 rounded-lg px-4 py-3 text-sm text-[#16251b] placeholder-[#2b5c32]/25 tracking-wide outline-none focus:border-[#2b5c32]/60 focus:bg-[#dfd7b9]/20 transition-all duration-200"
+                        />
+                      </div>
+
+                      {/* Phone */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#2b5c32]/50">
+                          Contact Number <span className="text-[#2b5c32]">*</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <div className="border border-[#2b5c32]/20 rounded-lg px-3 flex items-center gap-1.5 text-[11px] text-[#2b5c32]/60 font-mono shrink-0">
+                            🇮🇳 +91
+                          </div>
+                          <input
+                            type="tel"
+                            required
+                            value={formState.phone}
+                            onChange={(e) => setFormState(p => ({ ...p, phone: e.target.value }))}
+                            placeholder="98765 43210"
+                            pattern="[0-9]{10}"
+                            title="Enter 10-digit mobile number"
+                            className="flex-1 bg-transparent border border-[#2b5c32]/20 rounded-lg px-4 py-3 text-sm text-[#16251b] placeholder-[#2b5c32]/25 tracking-wide outline-none focus:border-[#2b5c32]/60 focus:bg-[#dfd7b9]/20 transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+
+                      {error && (
+                        <p className="text-[10px] font-mono tracking-wider text-red-600/70 text-center">{error}</p>
+                      )}
+
+                      {/* Submit */}
+                      <button
+                        type="submit"
+                        disabled={sending}
+                        className="w-full mt-1 bg-[#2b5c32] text-[#ede6cb] rounded-full py-4 text-[10px] font-mono font-bold tracking-[0.35em] uppercase flex items-center justify-center gap-3 hover:bg-[#123617] disabled:opacity-60 transition-all duration-300 hover:-translate-y-0.5"
+                      >
+                        {sending ? (
+                          <>
+                            <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                            </svg>
+                            Sending…
+                          </>
+                        ) : (
+                          <>
+                            Send Enquiry
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                          </>
+                        )}
+                      </button>
+
+                      <p className="text-[8px] font-mono tracking-[0.2em] uppercase text-[#2b5c32]/30 text-center">
+                        Your details are safe with us. No spam, ever.
+                      </p>
+                    </form>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal animation keyframe */}
+              <style>{`
+      @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.88) translateY(24px); }
+        to   { opacity: 1; transform: scale(1)    translateY(0);    }
+      }
+    `}</style>
+            </div>
+          )}
+
+
+
+          {/* FINAL FOOTER SECTION */}
+          <footer ref={contactRef} className="grid grid-cols-1 md:grid-cols-12 w-full bg-[#ede6cb] relative z-30">
+            <div className="md:col-span-6 p-8 md:p-12 lg:p-16 flex flex-col justify-between space-y-16 relative">
+              <div className="footer-content space-y-12">
+                <h3 className="font-editorial-heading text-4xl lg:text-5xl font-normal tracking-widest text-[#16251b] uppercase leading-none">
+                  KEEP IN TOUCH
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 bg-[#2b5c32] rounded-tr-full"></div>
+                    <span className="font-editorial-heading tracking-[0.1em] text-sm text-[#16251b] font-bold">
+                      Sparking Star
+                    </span>
+                  </div>
+                  <p className="text-[#2b5c32] text-[10px] tracking-widest uppercase leading-[1.8] max-w-sm font-sans font-medium">
+                    A-1, Charkop Shree Ganesh CHSL,
+                    <br />
+                    Plot No. 937, Near Platinum tower, Sector-9,
+                    <br />
+                    Charkop, Kandivali (W) , Mumbai - 400067
+                  </p>
+                </div>
+              </div>
+              <div className="footer-content pt-8 border-t border-[#2b5c32]/10 w-full flex gap-12 text-[10px] tracking-[0.25em] text-[#2b5c32]/80 font-bold uppercase">
+                <span className="cursor-pointer hover:text-black transition-colors">FAQ</span>
+                <span className="cursor-pointer hover:text-black transition-colors">TERMS & AGREEMENTS</span>
+              </div>
+            </div>
+
+            <div className="md:col-span-6 border-t md:border-t-0 md:border-l border-[#2b5c32]/10 flex flex-col justify-between text-[10px] tracking-[0.25em] font-medium uppercase text-[#2b5c32] bg-[#dfd7b9]/10">
+              <div className="divide-y divide-[#2b5c32]/10 w-full">
+                <div className="footer-link p-6 md:p-8 flex justify-between items-center group cursor-pointer hover:bg-[#ede6cb]/30 transition-colors">
+                  <span>EMAIL</span>
+                  <a
+                    href="mailto:sparkingstarsenterprises@gmail.com "
+                    className="text-[#16251b] font-mono tracking-normal text-xs font-normal lowercase group-hover:text-[#2b5c32] transition-colors"
+                  >
+                    sparkingstarsenterprises@gmail.com
+                  </a>
+                </div>
+                <div className="footer-link p-6 md:p-8 flex justify-between items-center group cursor-pointer hover:bg-[#ede6cb]/30 transition-colors">
+                  <span>INSTAGRAM</span>
+                  <span className="text-[#16251b] group-hover:text-[#2b5c32] transition-colors">@SPARKINGSTARS</span>
+                </div>
+                <div className="footer-link p-6 md:p-8 flex justify-between items-center group cursor-pointer hover:bg-[#ede6cb]/30 transition-colors">
+                  <span>TWITTER</span>
+                  <span className="text-[#16251b] group-hover:text-[#2b5c32] transition-colors">@SPARKINGSTARS</span>
+                </div>
+                <div className="footer-link p-6 md:p-8 flex justify-between items-center group cursor-pointer hover:bg-[#ede6cb]/30 transition-colors">
+                  <span>TELEGRAM</span>
+                  <span className="text-[#16251b] group-hover:text-[#2b5c32] transition-colors">@SPARKINGSTARS</span>
+                </div>
+              </div>
+            </div>
+          </footer>
+
+
+          <div className="w-full border-t border-[#2b5c32]/10 bg-[#dfd7b9] h-4 relative z-30"></div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

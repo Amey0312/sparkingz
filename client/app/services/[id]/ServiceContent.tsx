@@ -81,7 +81,7 @@ export default function ServiceContent() {
           <div className="opacity-0 pointer-events-none">CONTACT</div>
         </nav>
         <div className="flex flex-col items-center justify-center space-y-8 flex-grow">
-          <span onClick={() => { setIsMenuOpen(false); router.push('/demo'); }} className="cursor-pointer font-editorial-heading text-4xl text-zinc-500 hover:text-[#2b5c32] transition-colors uppercase tracking-widest">Presentation Demo</span>
+          <span onClick={() => { setIsMenuOpen(false); router.push('/'); }} className="cursor-pointer font-editorial-heading text-4xl text-zinc-500 hover:text-[#2b5c32] transition-colors uppercase tracking-widest">Presentation Demo</span>
         </div>
         <div className="w-full flex justify-center gap-2.5 py-8 bg-[#ede6cb] text-center border-t border-[#2b5c32]/10">
           <span className="text-[#2b5c32] text-[8px] transform rotate-45 select-none">✦</span>
